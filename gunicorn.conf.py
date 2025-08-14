@@ -1,7 +1,13 @@
 import os
 
 # Server socket
-bind = f"0.0.0.0:{os.environ.get('PORT', 5000)}"
+# Check if we should bind to Unix socket (for Cabotage) or TCP port
+if os.environ.get("BIND_UNIX_SOCKET"):
+    bind = "unix:/var/run/cabotage/cabotage.sock"
+    # Ensure proper permissions for the socket
+    umask = 0o117  # Results in socket permissions of 660
+else:
+    bind = f"0.0.0.0:{os.environ.get('PORT', 5000)}"
 
 # Worker processes
 workers = int(os.environ.get("WEB_CONCURRENCY", 2))

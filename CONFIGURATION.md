@@ -30,6 +30,7 @@
 
 #### Deployment Configuration
 - `PORT` - Port for web server to bind to (defaults to `5000`)
+- `BIND_UNIX_SOCKET` - If set, bind to Unix socket at `/var/run/cabotage/cabotage.sock` instead of TCP port
 - `WEB_CONCURRENCY` - Number of Gunicorn worker processes (defaults to `2`)
 - `LOG_LEVEL` - Application log level (`debug`, `info`, `warning`, `error`) - defaults to `info`
 
