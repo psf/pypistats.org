@@ -34,3 +34,6 @@ if [[ "$1" = "seeds" ]]
 then
   exec python -m migrations.seeds
 fi
+
+# Default: run the command as-is
+exec "$@"
