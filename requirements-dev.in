@@ -2,10 +2,7 @@
 # To update: pip-compile requirements-dev.in
 # To install: pip install -r requirements-dev.txt
 
-# Include all production dependencies
--r requirements.in
-
-# Development tools
+# Development tools only - production deps are in requirements.txt
 black>=19.10b0
 isort>=5.3
 pip-tools
