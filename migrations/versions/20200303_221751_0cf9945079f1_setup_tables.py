@@ -1,10 +1,11 @@
 """setup_tables
 
 Revision ID: 0cf9945079f1
-Revises: 
+Revises:
 Create Date: 2020-03-03 22:17:51.438119
 
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
