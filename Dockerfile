@@ -22,10 +22,13 @@ ENV PATH=/home/python/.local/bin:$PATH
 
 # Add requirements files
 ADD requirements.txt .
+ADD requirements-dev.txt .
 
 # Install all the dependencies
+# Install dev requirements for development environment (formatting tools, etc.)
 RUN pip install --user -U pip && \
-    pip install --user -r requirements.txt
+    pip install --user -r requirements.txt && \
+    pip install --user -r requirements-dev.txt
 
 # Add everything
 ADD . .

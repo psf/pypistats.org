@@ -1,4 +1,5 @@
 """Package stats tables."""
+
 from pypistats.database import Column
 from pypistats.database import Model
 from pypistats.extensions import db

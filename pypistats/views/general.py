@@ -1,4 +1,5 @@
 """General pages."""
+
 import datetime
 import re
 from collections import defaultdict

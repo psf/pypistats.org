@@ -1,4 +1,5 @@
 """Get the download stats for a specific day."""
+
 import datetime
 import os
 import time

@@ -1,4 +1,5 @@
 """Error page handlers."""
+
 from flask import Blueprint
 from flask import url_for
 

@@ -1,4 +1,5 @@
 """PyPIStats application."""
+
 from celery import Task
 from flask import Flask
 

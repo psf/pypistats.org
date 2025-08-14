@@ -28,7 +28,7 @@ services:
     ports:
       - "8000:5000"
     volumes:
-      - "./pypistats/:/app/pypistats/"
+      - "./:/app/"
   beat:
     image: web
     command: beat
@@ -36,7 +36,7 @@ services:
       - redis
     <<: *envs
     volumes:
-      - "./pypistats/:/app/pypistats/"
+      - "./:/app/"
   celery:
     image: web
     command: celery
@@ -45,7 +45,7 @@ services:
       - postgresql
     <<: *envs
     volumes:
-      - "./pypistats/:/app/pypistats/"
+      - "./:/app/"
   flower:
     image: web
     command: flower
@@ -55,7 +55,7 @@ services:
     ports:
       - "5555:5555"
     volumes:
-      - "./pypistats/:/app/pypistats/"
+      - "./:/app/"
   migrate:
     image: web
     command: migrate
@@ -63,8 +63,7 @@ services:
       - postgresql
     <<: *envs
     volumes:
-      - "./pypistats/:/app/pypistats/"
-      - "./migrations/:/app/migrations/"
+      - "./:/app/"
   seeds:
     image: web
     command: seeds
@@ -73,8 +72,7 @@ services:
       - migrate
     <<: *envs
     volumes:
-      - "./pypistats/:/app/pypistats/"
-      - "./migrations/:/app/migrations/"
+      - "./:/app/"
   redis:
     image: "redis:7-alpine"
     ports:

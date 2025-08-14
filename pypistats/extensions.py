@@ -1,4 +1,5 @@
 """Flask extensions."""
+
 from celery import Celery
 from flask_github import GitHub
 from flask_httpauth import HTTPBasicAuth

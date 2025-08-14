@@ -1,4 +1,5 @@
 """User page for tracking packages."""
+
 from flask import Blueprint
 from flask import abort
 from flask import flash

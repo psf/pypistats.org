@@ -1,4 +1,5 @@
 """JSON API routes."""
+
 from flask import Blueprint
 from flask import abort
 from flask import g

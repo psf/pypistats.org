@@ -1,7 +1,12 @@
 # format everything
 fmt:
-	isort .
-	black .
+	docker-compose run --rm web isort .
+	docker-compose run --rm web black .
+
+# check formatting without modifying files
+check-fmt:
+	docker-compose run --rm web isort . --check-only
+	docker-compose run --rm web black . --check
 
 # launch the application in docker-compose
 .PHONY: pypistats
