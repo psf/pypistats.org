@@ -12,6 +12,7 @@ flask-wtf>=0.14.2
 gunicorn>=19.9
 requests>=2.22
 celery>=4.3
+celery-redbeat>=2.0  # Redis-based beat scheduler
 psycopg2-binary>=2.8
 redis>=3.3
 flask-limiter>=1.2.1

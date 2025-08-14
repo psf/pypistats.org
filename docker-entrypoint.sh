@@ -17,7 +17,7 @@ fi
 
 if [[ "$1" = "beat" ]]
 then
-  exec celery -A pypistats.extensions.celery beat -l info
+  exec celery -A pypistats.extensions.celery beat -l info --scheduler redbeat.RedBeatScheduler
 fi
 
 if [[ "$1" = "flower" ]]

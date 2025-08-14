@@ -295,7 +295,7 @@ def get_query(date):
       WHERE
         DATE(timestamp) = '{date}'
       AND
-        (REGEXP_CONTAINS(details.python,r'^[0-9]\.[0-9]+.{{0,}}$') OR
+        (REGEXP_CONTAINS(details.python,r'^[0-9]\\.[0-9]+.{{0,}}$') OR
         details.python IS NULL)
       )
     SELECT
@@ -316,7 +316,7 @@ def get_query(date):
     SELECT
       package,
       'python_minor' AS category_label,
-      REGEXP_EXTRACT(python_version, r'^[0-9]+\.[0-9]+') AS category,
+      REGEXP_EXTRACT(python_version, r'^[0-9]+\\.[0-9]+') AS category,
       COUNT(*) AS downloads
     FROM
       dls

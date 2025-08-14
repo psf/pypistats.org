@@ -22,6 +22,10 @@ class Config:
     beat_schedule = {
         "update_db": {"task": "pypistats.tasks.pypi.etl", "schedule": crontab(minute=0, hour=1)}  # 1am UTC
     }
+    # Use RedBeat scheduler to store schedule in Redis instead of filesystem
+    beat_scheduler = "redbeat.RedBeatScheduler"
+    # RedBeat uses the same Redis as the broker by default
+    redbeat_redis_url = os.environ.get("REDIS_URL", "redis://redis:6379/0")
     GITHUB_CLIENT_ID = os.environ.get("GITHUB_CLIENT_ID")
     GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET")
     PROJECT_ROOT = os.path.abspath(os.path.join(APP_DIR, os.pardir))
