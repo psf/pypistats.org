@@ -11,8 +11,6 @@ x-envs: &envs
     - PYPISTATS_SECRET=${PYPISTATS_SECRET:-dev-secret-key}
     - GOOGLE_SERVICE_ACCOUNT_JSON=${GOOGLE_SERVICE_ACCOUNT_JSON:-}
 
-version: "3.4"
-
 volumes:
   pgdata: {}
 
@@ -20,6 +18,8 @@ services:
   web:
     build:
       context: .
+      args:
+        DEVEL: "yes"
     image: web
     command: webdev
     depends_on:
