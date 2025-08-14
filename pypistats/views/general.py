@@ -46,8 +46,10 @@ def index():
 
 
 @blueprint.route("/health")
+@blueprint.route("/_health/")
 def health():
-    return "OK"
+    """Health check endpoint."""
+    return "OK", 200
 
 
 @blueprint.route("/search/<package>", methods=("GET", "POST"))
