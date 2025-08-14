@@ -15,8 +15,7 @@ auth = HTTPBasicAuth()
 
 def create_celery(name=__name__, config=Config):
     """Create a celery object."""
-    redis_uri = "redis://localhost:6379"
-    celery = Celery(name, broker=redis_uri)
+    celery = Celery(name)
     celery.config_from_object(config)
     return celery
 

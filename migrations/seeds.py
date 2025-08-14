@@ -21,15 +21,14 @@ if db.session.query(RecentDownloadCount.package).count() > 0:
     sys.exit(0)
 
 # use the currently installed dependencies as seed packages
-result = subprocess.run(["poetry", "show"], stdout=subprocess.PIPE)
+result = subprocess.run(["pip", "list", "--format=freeze"], stdout=subprocess.PIPE)
 output = result.stdout.decode()
 
 # extract just the package names from the output
-# skip the first line which is a poetry warning
-# and the last line which is empty
 packages = []
-for line in output.split("\n")[1:-1]:
-    packages.append(line.split(" ")[0])
+for line in output.split("\n"):
+    if "==" in line:
+        packages.append(line.split("==")[0])
 
 # add some packages that have optional dependencies
 packages.append("apache-airflow")
@@ -55,7 +54,6 @@ for package in packages + ["__all__"]:
         records.append(record)
 
     for date in date_list:
-
         for idx, category in enumerate(["with_mirrors", "without_mirrors"]):
             record = OverallDownloadCount(
                 date=date,

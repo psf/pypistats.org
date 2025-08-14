@@ -1,0 +1,11 @@
+# Development dependencies for pypistats.org
+# To update: pip-compile requirements-dev.in
+# To install: pip install -r requirements-dev.txt
+
+# Include all production dependencies
+-r requirements.in
+
+# Development tools
+black>=19.10b0
+isort>=5.3
+pip-tools

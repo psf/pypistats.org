@@ -4,9 +4,7 @@ import os
 import time
 
 import psycopg2
-from google.auth.crypt._python_rsa import RSASigner
 from google.cloud import bigquery
-from google.oauth2.service_account import Credentials
 from psycopg2.extras import execute_values
 
 from pypistats.extensions import celery
@@ -25,23 +23,25 @@ MAX_RECORD_AGE = 180
 
 
 def get_google_credentials():
-    """Obtain the Google credentials object explicitly."""
-    private_key = os.environ["GOOGLE_PRIVATE_KEY"].replace('"', "").replace("\\n", "\n")
-    private_key_id = os.environ["GOOGLE_PRIVATE_KEY_ID"]
-    signer = RSASigner.from_string(key=private_key, key_id=private_key_id)
+    """Obtain the Google credentials and project ID from service account JSON."""
+    import json
 
-    project_id = os.environ["GOOGLE_PROJECT_ID"]
-    service_account_email = os.environ["GOOGLE_CLIENT_EMAIL"]
-    scopes = ("https://www.googleapis.com/auth/bigquery", "https://www.googleapis.com/auth/cloud-platform")
-    token_uri = os.environ["GOOGLE_TOKEN_URI"]
-    credentials = Credentials(
-        signer=signer,
-        service_account_email=service_account_email,
-        token_uri=token_uri,
-        scopes=scopes,
-        project_id=project_id,
+    from google.oauth2 import service_account
+
+    # Use service account JSON provided as a single environment variable
+    service_account_json = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+    if not service_account_json:
+        raise ValueError("GOOGLE_SERVICE_ACCOUNT_JSON environment variable is required")
+
+    service_account_info = json.loads(service_account_json)
+    credentials = service_account.Credentials.from_service_account_info(
+        service_account_info,
+        scopes=["https://www.googleapis.com/auth/bigquery", "https://www.googleapis.com/auth/cloud-platform"],
     )
-    return credentials
+    project_id = service_account_info.get("project_id")
+    if not project_id:
+        raise ValueError("project_id not found in service account JSON")
+    return credentials, project_id
 
 
 def get_daily_download_stats(date):
@@ -49,8 +49,8 @@ def get_daily_download_stats(date):
     start = time.time()
 
     job_config = bigquery.QueryJobConfig()
-    credentials = get_google_credentials()
-    bq_client = bigquery.Client(project=os.environ["GOOGLE_PROJECT_ID"], credentials=credentials)
+    credentials, project_id = get_google_credentials()
+    bq_client = bigquery.Client(project=project_id, credentials=credentials)
     if date is None:
         date = str(datetime.date.today() - datetime.timedelta(days=1))
 
@@ -224,14 +224,7 @@ def update_recent_stats(date=None):
 
 def get_connection_cursor():
     """Get a db connection cursor."""
-    connection = psycopg2.connect(
-        dbname=os.environ["POSTGRESQL_DBNAME"],
-        user=os.environ["POSTGRESQL_USERNAME"],
-        password=os.environ["POSTGRESQL_PASSWORD"],
-        host=os.environ["POSTGRESQL_HOST"],
-        port=os.environ["POSTGRESQL_PORT"],
-        # sslmode='require',
-    )
+    connection = psycopg2.connect(os.environ["DATABASE_URL"])
     cursor = connection.cursor()
     return connection, cursor
 

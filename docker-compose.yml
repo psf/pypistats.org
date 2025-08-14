@@ -1,16 +1,15 @@
 x-envs: &envs
+  env_file: .env
   environment:
     - FLASK_APP=pypistats/run.py
     - FLASK_ENV=development
     - FLASK_DEBUG=1
-    - POSTGRESQL_HOST=postgresql
-    - POSTGRESQL_PORT=5432
-    - POSTGRESQL_USERNAME=admin
-    - POSTGRESQL_PASSWORD=root
-    - POSTGRESQL_DBNAME=pypistats
-    - CELERY_BROKER_URL=redis://redis
-    - BASIC_AUTH_USER=user
-    - BASIC_AUTH_PASSWORD=password
+    - DATABASE_URL=${DATABASE_URL:-postgresql://admin:root@postgresql:5432/pypistats}
+    - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    - BASIC_AUTH_USER=${BASIC_AUTH_USER:-user}
+    - BASIC_AUTH_PASSWORD=${BASIC_AUTH_PASSWORD:-password}
+    - PYPISTATS_SECRET=${PYPISTATS_SECRET:-dev-secret-key}
+    - GOOGLE_SERVICE_ACCOUNT_JSON=${GOOGLE_SERVICE_ACCOUNT_JSON:-}
 
 version: "3.4"
 
@@ -27,7 +26,7 @@ services:
       - postgresql
     <<: *envs
     ports:
-      - "5000:5000"
+      - "8000:5000"
     volumes:
       - "./pypistats/:/app/pypistats/"
   beat:
@@ -77,11 +76,11 @@ services:
       - "./pypistats/:/app/pypistats/"
       - "./migrations/:/app/migrations/"
   redis:
-    image: "redis:5.0.7-alpine"
+    image: "redis:7-alpine"
     ports:
       - "6379:6379"
   postgresql:
-    image: "postgres:12"
+    image: "postgres:16"
     environment:
       - POSTGRES_USER=admin
       - POSTGRES_PASSWORD=root

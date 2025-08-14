@@ -1,0 +1,20 @@
+# Production dependencies for pypistats.org
+# To update: pip-compile requirements.in
+# To install: pip install -r requirements.txt
+
+google-cloud-bigquery>=1.17
+flask>=1.1
+github-flask>=3.2
+flask-sqlalchemy>=2.4
+flask-migrate>=2.5
+flask-login>=0.4.1
+flask-wtf>=0.14.2
+gunicorn>=19.9
+requests>=2.22
+celery>=4.3
+psycopg2-binary>=2.8
+redis>=3.3
+flask-limiter>=1.2.1
+flower>=0.9.5
+flask-httpauth>=4.1.0
+greenlet>=1.0  # Required by SQLAlchemy
