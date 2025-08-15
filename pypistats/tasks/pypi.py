@@ -44,10 +44,10 @@ def get_sqlite_db(date):
     try:
         # Performance optimizations for bulk inserts
         cursor.execute("PRAGMA synchronous = OFF")  # Don't wait for disk writes
-        cursor.execute("PRAGMA journal_mode = MEMORY")  # Keep journal in memory
-        cursor.execute("PRAGMA temp_store = MEMORY")  # Use memory for temp tables
-        cursor.execute("PRAGMA cache_size = -64000")  # 64MB cache (negative = KB)
-        cursor.execute("PRAGMA page_size = 32768")  # Larger page size
+        cursor.execute("PRAGMA journal_mode = WAL")  # Write-Ahead Logging (faster, less memory)
+        cursor.execute("PRAGMA temp_store = FILE")  # Use disk for temp tables to save memory
+        cursor.execute("PRAGMA cache_size = -32000")  # 32MB cache to reduce memory usage
+        cursor.execute("PRAGMA page_size = 8192")  # Smaller page size for better memory efficiency
         cursor.execute("PRAGMA locking_mode = EXCLUSIVE")  # Exclusive access
 
         # Create tables matching PostgreSQL structure
@@ -154,6 +154,10 @@ def transfer_sqlite_to_postgres(sqlite_cursor, date):
     """Transfer all data from SQLite to PostgreSQL in a single atomic transaction."""
     pg_conn, pg_cursor = get_connection_cursor()
 
+    # Smaller chunk size to reduce memory usage
+    # 10k rows is more manageable and still efficient
+    TRANSFER_CHUNK_SIZE = 10000
+
     try:
         # Start transaction
         pg_conn.autocommit = False
@@ -162,29 +166,54 @@ def transfer_sqlite_to_postgres(sqlite_cursor, date):
 
         # For each table, delete old data and insert new data
         for table in PSQL_TABLES:
-            # Get all data from SQLite
+            # First, count the rows to transfer
             sqlite_cursor.execute(
-                f"""
-                SELECT date, package, category, downloads 
-                FROM {table} 
-                WHERE date = ?
-            """,
+                f"SELECT COUNT(*) FROM {table} WHERE date = ?",
                 (date,),
             )
-            rows = sqlite_cursor.fetchall()
+            total_rows = sqlite_cursor.fetchone()[0]
 
-            if rows:
-                print(f"Transferring {len(rows)} rows to PostgreSQL {table}...")
+            if total_rows > 0:
+                print(f"Transferring {total_rows:,} rows to PostgreSQL {table}...")
 
                 # Delete existing data for this date
                 pg_cursor.execute(f"DELETE FROM {table} WHERE date = %s", (date,))
 
-                # Bulk insert new data
-                insert_query = f"""
-                    INSERT INTO {table} (date, package, category, downloads)
-                    VALUES %s
-                """
-                execute_values(pg_cursor, insert_query, rows, page_size=10000)
+                # Stream data in chunks to avoid loading all into memory
+                offset = 0
+                chunks_transferred = 0
+
+                while offset < total_rows:
+                    # Get a chunk of data from SQLite
+                    sqlite_cursor.execute(
+                        f"""
+                        SELECT date, package, category, downloads 
+                        FROM {table} 
+                        WHERE date = ?
+                        ORDER BY package, category
+                        LIMIT ? OFFSET ?
+                        """,
+                        (date, TRANSFER_CHUNK_SIZE, offset),
+                    )
+                    chunk = sqlite_cursor.fetchall()
+
+                    if not chunk:
+                        break
+
+                    # Insert this chunk into PostgreSQL
+                    insert_query = f"""
+                        INSERT INTO {table} (date, package, category, downloads)
+                        VALUES %s
+                    """
+                    # Smaller page_size to reduce memory usage when building SQL
+                    execute_values(pg_cursor, insert_query, chunk, page_size=1000)
+
+                    chunks_transferred += 1
+                    offset += TRANSFER_CHUNK_SIZE
+
+                    # Report progress every 50 chunks (500k rows with 10k chunks)
+                    if chunks_transferred % 50 == 0:
+                        print(f"  Transferred {offset:,}/{total_rows:,} rows...")
 
         # Commit the transaction - all tables update atomically
         pg_conn.commit()
@@ -662,7 +691,7 @@ def get_query(date):
 
 
 @celery.task
-def etl(date=None, purge=True, use_sqlite=True):
+def etl(date=None, purge=True, use_sqlite=True, update_recent=True):
     """
     Perform the stats download.
 
@@ -670,6 +699,7 @@ def etl(date=None, purge=True, use_sqlite=True):
         date: Date to process (YYYY-MM-DD format)
         purge: Whether to purge old data
         use_sqlite: Use SQLite staging for atomic updates (recommended)
+        update_recent: Whether to update recent stats table (set False for backfill)
     """
     if date is None:
         date = str(datetime.date.today() - datetime.timedelta(days=1))
@@ -687,7 +717,9 @@ def etl(date=None, purge=True, use_sqlite=True):
         results["downloads"] = get_daily_download_stats(date)
         results["__all__"] = update_all_package_stats(date)
 
-    results["recent"] = update_recent_stats()
+    if update_recent:
+        results["recent"] = update_recent_stats()
+
     results["cleanup"] = vacuum_analyze()
 
     if purge:

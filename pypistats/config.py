@@ -18,7 +18,7 @@ class Config:
     # Celery 5.x configuration
     broker_url = os.environ.get("REDIS_URL", "redis://redis:6379/0")
     broker_transport_options = {"visibility_timeout": 86400}
-    imports = ["pypistats.tasks.pypi"]
+    imports = ["pypistats.tasks.pypi", "pypistats.tasks.backfill"]
     beat_schedule = {
         "update_db": {"task": "pypistats.tasks.pypi.etl", "schedule": crontab(minute=0, hour=1)}  # 1am UTC
     }
