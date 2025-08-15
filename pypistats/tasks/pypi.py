@@ -2,7 +2,10 @@
 
 import datetime
 import os
+import sqlite3
+import tempfile
 import time
+from contextlib import contextmanager
 
 import psycopg2
 from google.cloud import bigquery
@@ -21,6 +24,58 @@ PSQL_TABLES = ["overall", "python_major", "python_minor", "system"]
 
 # Number of days to retain records
 MAX_RECORD_AGE = 180
+
+# Configurable batch size for processing (default 100,000)
+BATCH_SIZE = int(os.environ.get("ETL_BATCH_SIZE", "100000"))
+
+
+@contextmanager
+def get_sqlite_db(date):
+    """Create a temporary SQLite database for staging data."""
+    # Create temp file in system temp directory
+    temp_dir = tempfile.gettempdir()
+    db_path = os.path.join(temp_dir, f"pypistats_etl_{date.replace('-', '')}.db")
+
+    print(f"Creating temporary SQLite database: {db_path}")
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    try:
+        # Performance optimizations for bulk inserts
+        cursor.execute("PRAGMA synchronous = OFF")  # Don't wait for disk writes
+        cursor.execute("PRAGMA journal_mode = MEMORY")  # Keep journal in memory
+        cursor.execute("PRAGMA temp_store = MEMORY")  # Use memory for temp tables
+        cursor.execute("PRAGMA cache_size = -64000")  # 64MB cache (negative = KB)
+        cursor.execute("PRAGMA page_size = 32768")  # Larger page size
+        cursor.execute("PRAGMA locking_mode = EXCLUSIVE")  # Exclusive access
+
+        # Create tables matching PostgreSQL structure
+        for table in PSQL_TABLES:
+            cursor.execute(
+                f"""
+                CREATE TABLE IF NOT EXISTS {table} (
+                    date TEXT NOT NULL,
+                    package TEXT NOT NULL,
+                    category TEXT NOT NULL,
+                    downloads INTEGER NOT NULL,
+                    PRIMARY KEY (date, package, category)
+                )
+            """
+            )
+
+            # Create indexes AFTER bulk inserts for better performance
+            # We'll create them later in the process
+
+        conn.commit()
+        yield conn, cursor
+
+    finally:
+        conn.close()
+        # Clean up temp file
+        if os.path.exists(db_path):
+            os.remove(db_path)
+            print(f"Cleaned up temporary database: {db_path}")
 
 
 def get_google_credentials():
@@ -45,9 +100,204 @@ def get_google_credentials():
     return credentials, project_id
 
 
+def process_batch_to_sqlite(cursor, table, rows):
+    """Insert a batch of rows into SQLite table."""
+    # Filter invalid rows
+    valid_rows = []
+    for row in rows:
+        # Convert None to 'null' string for SQLite compatibility
+        # This preserves NULL Python versions which are valid data
+        processed_row = []
+        for item in row:
+            if item is None:
+                processed_row.append("null")
+            else:
+                processed_row.append(item)
+
+        # Skip rows with overly long package names
+        if any(len(str(item)) > 128 for item in processed_row[1:2]):  # Check package name only
+            continue
+
+        # Skip rows with empty (but not null) python versions for version tables
+        if table in ("python_major", "python_minor"):
+            if processed_row[2] in ("", "."):
+                continue
+
+        valid_rows.append(processed_row)
+
+    if not valid_rows:
+        return True
+
+    # SQLite has a limit on number of variables (SQLITE_MAX_VARIABLE_NUMBER)
+    # Default is often 999, but can be up to 32766
+    # Most modern SQLite builds support 32766 variables
+    # With 4 columns per row, we can do 8000 rows at a time (32000 variables)
+    # Using 2000 for safety and good performance
+    SQLITE_CHUNK_SIZE = 2000
+
+    try:
+        # Process in chunks to avoid "too many SQL variables" error
+        for i in range(0, len(valid_rows), SQLITE_CHUNK_SIZE):
+            chunk = valid_rows[i : i + SQLITE_CHUNK_SIZE]
+
+            # Use executemany for better performance
+            cursor.executemany(
+                f"INSERT OR REPLACE INTO {table} (date, package, category, downloads) VALUES (?, ?, ?, ?)", chunk
+            )
+        return True
+    except sqlite3.Error as e:
+        print(f"Error inserting into SQLite {table}: {e}")
+        return False
+
+
+def transfer_sqlite_to_postgres(sqlite_cursor, date):
+    """Transfer all data from SQLite to PostgreSQL in a single atomic transaction."""
+    pg_conn, pg_cursor = get_connection_cursor()
+
+    try:
+        # Start transaction
+        pg_conn.autocommit = False
+
+        print("Starting PostgreSQL transaction...")
+
+        # For each table, delete old data and insert new data
+        for table in PSQL_TABLES:
+            # Get all data from SQLite
+            sqlite_cursor.execute(
+                f"""
+                SELECT date, package, category, downloads 
+                FROM {table} 
+                WHERE date = ?
+            """,
+                (date,),
+            )
+            rows = sqlite_cursor.fetchall()
+
+            if rows:
+                print(f"Transferring {len(rows)} rows to PostgreSQL {table}...")
+
+                # Delete existing data for this date
+                pg_cursor.execute(f"DELETE FROM {table} WHERE date = %s", (date,))
+
+                # Bulk insert new data
+                insert_query = f"""
+                    INSERT INTO {table} (date, package, category, downloads)
+                    VALUES %s
+                """
+                execute_values(pg_cursor, insert_query, rows, page_size=10000)
+
+        # Commit the transaction - all tables update atomically
+        pg_conn.commit()
+        print("PostgreSQL transaction committed successfully!")
+
+        return True
+
+    except psycopg2.Error as e:
+        print(f"Error during PostgreSQL transfer: {e}")
+        pg_conn.rollback()
+        return False
+
+    finally:
+        pg_conn.autocommit = True
+        pg_conn.close()
+
+
+def get_daily_download_stats_sqlite(date):
+    """Stream BigQuery data into SQLite, then transfer to PostgreSQL atomically."""
+    start = time.time()
+
+    if date is None:
+        date = str(datetime.date.today() - datetime.timedelta(days=1))
+
+    with get_sqlite_db(date) as (sqlite_conn, sqlite_cursor):
+        # Stream from BigQuery into SQLite
+        job_config = bigquery.QueryJobConfig()
+        credentials, project_id = get_google_credentials()
+        bq_client = bigquery.Client(project=project_id, credentials=credentials)
+
+        print(f"Date: {date}")
+        print("Sending query to BigQuery...")
+        query = get_query(date)
+        query_job = bq_client.query(query, job_config=job_config)
+        iterator = query_job.result()
+        print(f"Streaming to SQLite (batch size: {BATCH_SIZE})")
+
+        batch_data = {}
+        row_count = 0
+        batches_processed = 0
+
+        for row in iterator:
+            row_count += 1
+
+            category_label = row["category_label"]
+            if category_label not in batch_data:
+                batch_data[category_label] = []
+
+            batch_data[category_label].append([date, row["package"], row["category"], row["downloads"]])
+
+            # Process batch when it reaches size limit
+            if len(batch_data[category_label]) >= BATCH_SIZE:
+                batches_processed += 1
+                print(f"Writing batch {batches_processed} to SQLite ({category_label}: {BATCH_SIZE} rows)")
+                process_batch_to_sqlite(sqlite_cursor, category_label, batch_data[category_label])
+                batch_data[category_label] = []
+
+            if row_count % 1000000 == 0:
+                sqlite_conn.commit()  # Less frequent commits for better performance
+                print(f"Processed {row_count} rows into SQLite...")
+
+        # Process remaining batches
+        for category_label, rows in batch_data.items():
+            if rows:
+                print(f"Writing final batch to SQLite ({category_label}: {len(rows)} rows)")
+                process_batch_to_sqlite(sqlite_cursor, category_label, rows)
+
+        sqlite_conn.commit()
+        print(f"SQLite staging complete: {row_count} rows in {batches_processed} batches")
+
+        # Create indexes now for faster aggregation
+        print("Creating indexes for aggregation...")
+        for table in PSQL_TABLES:
+            sqlite_cursor.execute(f"CREATE INDEX IF NOT EXISTS idx_{table}_date ON {table} (date)")
+            sqlite_cursor.execute(f"CREATE INDEX IF NOT EXISTS idx_{table}_package ON {table} (package)")
+        sqlite_conn.commit()
+
+        # Add __all__ aggregations in SQLite
+        print("Computing __all__ aggregations in SQLite...")
+        for table in PSQL_TABLES:
+            sqlite_cursor.execute(
+                f"""
+                INSERT OR REPLACE INTO {table} (date, package, category, downloads)
+                SELECT 
+                    date,
+                    '__all__' AS package,
+                    category,
+                    SUM(downloads) AS downloads
+                FROM {table}
+                WHERE date = ? AND package != '__all__'
+                GROUP BY date, category
+            """,
+                (date,),
+            )
+        sqlite_conn.commit()
+
+        # Now transfer everything to PostgreSQL in a single transaction
+        print("Starting atomic transfer to PostgreSQL...")
+        transfer_success = transfer_sqlite_to_postgres(sqlite_cursor, date)
+
+        elapsed = time.time() - start
+        return {
+            "success": transfer_success,
+            "rows_processed": row_count,
+            "batches_processed": batches_processed,
+            "elapsed": elapsed,
+        }
+
+
 def get_daily_download_stats(date):
     """Get daily download stats for pypi packages from BigQuery."""
     start = time.time()
+    connection, cursor = get_connection_cursor()
 
     job_config = bigquery.QueryJobConfig()
     credentials, project_id = get_google_credentials()
@@ -62,19 +312,53 @@ def get_daily_download_stats(date):
     print("Sent.")
     query_job = bq_client.query(query, job_config=job_config)
     iterator = query_job.result()
-    print("Downloading results.")
-    rows = list(iterator)
-    print(len(rows), "rows from gbq")
+    print("Streaming results with batch processing.")
+    print(f"Batch size: {BATCH_SIZE}")
 
-    data = {}
-    for row in rows:
-        if row["category_label"] not in data:
-            data[row["category_label"]] = []
-        data[row["category_label"]].append([date, row["package"], row["category"], row["downloads"]])
+    # Clear existing data for this date first
+    for table in PSQL_TABLES:
+        cursor.execute(f"DELETE FROM {table} WHERE date = %s", (date,))
+    connection.commit()
 
-    results = update_db(data, date)
+    batch_data = {}
+    row_count = 0
+    batches_processed = 0
+    results = {}
+
+    for row in iterator:  # Stream directly, no list()
+        row_count += 1
+
+        category_label = row["category_label"]
+        if category_label not in batch_data:
+            batch_data[category_label] = []
+            results[category_label] = True
+
+        batch_data[category_label].append([date, row["package"], row["category"], row["downloads"]])
+
+        # Process batch when it reaches size limit
+        if len(batch_data[category_label]) >= BATCH_SIZE:
+            batches_processed += 1
+            print(f"Processing batch {batches_processed} for {category_label} ({BATCH_SIZE} rows)")
+            success = update_table(connection, cursor, category_label, batch_data[category_label], date=None)
+            results[category_label] = results[category_label] and success
+            batch_data[category_label] = []  # Clear batch to free memory
+
+        if row_count % 100000 == 0:
+            print(f"Processed {row_count} rows...")
+
+    # Process remaining rows
+    for category_label, rows in batch_data.items():
+        if rows:
+            print(f"Processing final batch for {category_label} ({len(rows)} rows)")
+            success = update_table(connection, cursor, category_label, rows, date=None)
+            results[category_label] = results[category_label] and success
+
+    connection.close()
+    print(f"Total: {row_count} rows from gbq, {batches_processed} batches processed")
     print("Elapsed: " + str(time.time() - start))
     results["elapsed"] = time.time() - start
+    results["rows_processed"] = row_count
+    results["batches_processed"] = batches_processed
     return results
 
 
@@ -117,14 +401,17 @@ def update_table(connection, cursor, table, rows, date):
     for idx in sorted(delete_rows, reverse=True):
         rows.pop(idx)
 
-    delete_query = f"""DELETE FROM {table}
-            WHERE date = '{date}'"""
+    # Only delete if date is provided (for backward compatibility)
+    if date:
+        delete_query = f"""DELETE FROM {table}
+                WHERE date = '{date}'"""
+        print(delete_query)
+        cursor.execute(delete_query)
+
     insert_query = f"""INSERT INTO {table} (date, package, category, downloads)
             VALUES %s"""
 
     try:
-        print(delete_query)
-        cursor.execute(delete_query)
         print(insert_query)
         execute_values(cursor, insert_query, rows)
         connection.commit()
@@ -147,25 +434,31 @@ def update_all_package_stats(date=None):
     success = {}
     for table in PSQL_TABLES:
         aggregate_query = f"""SELECT date, '__all__' AS package, category, sum(downloads) AS downloads
-                FROM {table} where date = '{date}' GROUP BY date, category"""
-        cursor.execute(aggregate_query, (table,))
+                FROM {table} where date = %s GROUP BY date, category"""
+        print(f"Aggregating {table} for date {date}")
+        cursor.execute(aggregate_query, (date,))
         values = cursor.fetchall()
+        print(f"Found {len(values)} categories to aggregate for {table}")
 
         delete_query = f"""DELETE FROM {table}
-                WHERE date = '{date}' and package = '__all__'"""
+                WHERE date = %s and package = '__all__'"""
         insert_query = f"""INSERT INTO {table} (date, package, category, downloads)
                 VALUES %s"""
         try:
             print(delete_query)
-            cursor.execute(delete_query)
+            cursor.execute(delete_query, (date,))
             print(insert_query)
-            execute_values(cursor, insert_query, values)
+            if values:  # Only insert if there are values
+                execute_values(cursor, insert_query, values)
+                print(f"Inserted {len(values)} __all__ records into {table}")
             connection.commit()
             success[table] = True
         except psycopg2.IntegrityError as e:
+            print(f"Error updating __all__ for {table}: {e}")
             connection.rollback()
             success[table] = False
 
+    connection.close()
     print("Elapsed: " + str(time.time() - start))
     success["elapsed"] = time.time() - start
     return success
@@ -369,17 +662,37 @@ def get_query(date):
 
 
 @celery.task
-def etl(date=None, purge=True):
-    """Perform the stats download."""
+def etl(date=None, purge=True, use_sqlite=True):
+    """
+    Perform the stats download.
+
+    Args:
+        date: Date to process (YYYY-MM-DD format)
+        purge: Whether to purge old data
+        use_sqlite: Use SQLite staging for atomic updates (recommended)
+    """
     if date is None:
         date = str(datetime.date.today() - datetime.timedelta(days=1))
+
     results = dict()
-    results["downloads"] = get_daily_download_stats(date)
-    results["__all__"] = update_all_package_stats(date)
+
+    if use_sqlite:
+        # Use SQLite staging for zero-downtime atomic updates
+        print("Using SQLite staging for atomic updates")
+        results["downloads"] = get_daily_download_stats_sqlite(date)
+        # __all__ stats are already computed in SQLite
+    else:
+        # Use original streaming approach (partial data visible during ETL)
+        print("Using direct streaming (partial data may be visible)")
+        results["downloads"] = get_daily_download_stats(date)
+        results["__all__"] = update_all_package_stats(date)
+
     results["recent"] = update_recent_stats()
     results["cleanup"] = vacuum_analyze()
+
     if purge:
         results["purge"] = purge_old_data(date)
+
     return results
 
 
