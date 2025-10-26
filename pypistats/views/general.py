@@ -124,6 +124,13 @@ def package_page(package):
                         requires.add(package_name)
                 metadata["requires"] = sorted(requires)
                 metadata["optional"] = sorted(optional)
+            author = metadata["info"].get("author")
+            if author is None:
+                authors = metadata["info"].get("author_email")
+                if authors:
+                    author = ", ".join([a.strip().rsplit(maxsplit=1)[0] for a in authors.split(",")])
+                    metadata["author"] = author
+
         except Exception:
             pass
 
