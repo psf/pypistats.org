@@ -22,6 +22,13 @@ PyPI Stats provides a simple JSON API to retrieve aggregate download stats and t
 Development
 -----------
 
+Prerequisites:
+
+- Docker
+- Docker Compose, available as the ``docker-compose`` command used by the
+  Makefile
+- Make
+
 1. Copy ``.env.example`` to ``.env`` and configure your environment variables:
    
    .. code-block:: bash
@@ -29,5 +36,10 @@ Development
       cp .env.example .env
       # Edit .env with your configuration
 
-2. Run ``make pypistats`` to launch a complete development environment using docker-compose.
+2. Run ``make pypistats`` to launch a complete development environment. The
+   target stops any existing containers, rebuilds the images, and starts the
+   Docker Compose services for the app:
 
+   .. code-block:: bash
+
+      make pypistats
