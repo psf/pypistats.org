@@ -52,8 +52,7 @@ def get_sqlite_db(date):
 
         # Create tables matching PostgreSQL structure
         for table in PSQL_TABLES:
-            cursor.execute(
-                f"""
+            cursor.execute(f"""
                 CREATE TABLE IF NOT EXISTS {table} (
                     date TEXT NOT NULL,
                     package TEXT NOT NULL,
@@ -61,8 +60,7 @@ def get_sqlite_db(date):
                     downloads INTEGER NOT NULL,
                     PRIMARY KEY (date, package, category)
                 )
-            """
-            )
+            """)
 
             # Create indexes AFTER bulk inserts for better performance
             # We'll create them later in the process
@@ -104,6 +102,7 @@ def process_batch_to_sqlite(cursor, table, rows):
     """Insert a batch of rows into SQLite table."""
     # Filter invalid rows
     valid_rows = []
+    invalid_python_minor_rows = 0
     for row in rows:
         # Convert None to 'null' string for SQLite compatibility
         # This preserves NULL Python versions which are valid data
@@ -123,7 +122,15 @@ def process_batch_to_sqlite(cursor, table, rows):
             if processed_row[2] in ("", "."):
                 continue
 
+        # Skip rows with versions like 3.100, which exceed 4 char limit of category
+        if table == "python_minor" and len(str(processed_row[2])) > 4:
+            invalid_python_minor_rows += 1
+            continue
+
         valid_rows.append(processed_row)
+
+    if invalid_python_minor_rows:
+        print(f"Skipped {invalid_python_minor_rows} invalid python_minor rows")
 
     if not valid_rows:
         return True
@@ -644,6 +651,8 @@ def get_query(date):
       dls
     WHERE
       installer NOT IN {str(MIRRORS)}
+      AND (python_version IS NULL OR
+        REGEXP_CONTAINS(python_version, r'^[0-9]\\.[0-9]{{1,2}}(\\.|$)'))
     GROUP BY
       package,
       category
