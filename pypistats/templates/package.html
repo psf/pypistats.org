@@ -25,8 +25,11 @@
         {% if metadata %}
             <a href="{{ metadata['info']['package_url'] }}">PyPI page</a>
             <br>
-            <a href="{{ metadata['info']['home_page'] }}">Home page</a>
-            <br>
+            {% set homepage = metadata['info'].get('home_page') or (metadata['info'].get('project_urls') or {}).get('Homepage') %}
+            {% if homepage %}
+                <a href="{{ homepage }}">Home page</a>
+                <br>
+            {% endif %}
             Author:
             {{ metadata['info']['author'] }}
             {% if metadata['info']['license'] is not none %}
