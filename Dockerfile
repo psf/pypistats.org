@@ -1,5 +1,5 @@
 # Set variables for reuse
-ARG PYTHON_VERSION=3.13-slim-bookworm
+ARG PYTHON_VERSION=3.14-slim-trixie
 
 # Build stage for dependencies
 FROM python:${PYTHON_VERSION} AS build

@@ -125,7 +125,7 @@ pypistats/
 ```
 
 ### Dependencies:
-- Python 3.7+
+- Python 3.14+
 - Flask & extensions (SQLAlchemy, Migrate, Login, WTF, Limiter, HTTPAuth)
 - Google Cloud BigQuery client
 - Celery & Redis
