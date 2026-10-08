@@ -157,9 +157,9 @@ flask==3.1.1 \
     #   flask-sqlalchemy
     #   flask-wtf
     #   github-flask
-flask-httpauth==4.8.0 \
-    --hash=sha256:66568a05bc73942c65f1e2201ae746295816dc009edd84b482c44c758d75097a \
-    --hash=sha256:a58fedd09989b9975448eef04806b096a3964a7feeebc0a78831ff55685b62b0
+flask-httpauth==4.8.1 \
+    --hash=sha256:0080393d70e12327781f7509115175ec5e47209816489a620d4fd39e20cea2e8 \
+    --hash=sha256:88499b22f1353893743c3cd68f2ca561c4ad9ef75cd6bcc7f621161cd0e80744
     # via -r requirements.in
 flask-limiter==3.12 \
     --hash=sha256:b94c9e9584df98209542686947cf647f1ede35ed7e4ab564934a2bb9ed46b143 \
@@ -312,7 +312,9 @@ greenlet==3.2.4 \
     --hash=sha256:e37ab26028f12dbb0ff65f29a8d3d44a765c61e729647bf2ddfbbed621726f01 \
     --hash=sha256:f10fd42b5ee276335863712fa3da6608e93f70629c631bf77145021600abc23c \
     --hash=sha256:f28588772bb5fb869a8eb331374ec06f24a83a9c25bfa1f38b6993afe9c1e968
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   sqlalchemy
 grpcio==1.74.0 \
     --hash=sha256:0f87bddd6e27fc776aacf7ebfec367b6d49cad0455123951e4488ea99d9b9b8f \
     --hash=sha256:136b53c91ac1d02c8c24201bfdeb56f8b3ac3278668cbb8e0ba49c88069e1bdc \
