@@ -312,7 +312,9 @@ greenlet==3.2.4 \
     --hash=sha256:e37ab26028f12dbb0ff65f29a8d3d44a765c61e729647bf2ddfbbed621726f01 \
     --hash=sha256:f10fd42b5ee276335863712fa3da6608e93f70629c631bf77145021600abc23c \
     --hash=sha256:f28588772bb5fb869a8eb331374ec06f24a83a9c25bfa1f38b6993afe9c1e968
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   sqlalchemy
 grpcio==1.74.0 \
     --hash=sha256:0f87bddd6e27fc776aacf7ebfec367b6d49cad0455123951e4488ea99d9b9b8f \
     --hash=sha256:136b53c91ac1d02c8c24201bfdeb56f8b3ac3278668cbb8e0ba49c88069e1bdc \
@@ -622,9 +624,9 @@ redis==6.4.0 \
     # via
     #   -r requirements.in
     #   celery-redbeat
-requests==2.32.4 \
-    --hash=sha256:27babd3cda2a6d50b30443204ee89830707d396671944c998b5975b031ac2b2c \
-    --hash=sha256:27d0316682c8a29834d3264820024b62a36942083d52caf2f14c0591336d3422
+requests==2.34.2 \
+    --hash=sha256:2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0 \
+    --hash=sha256:f288924cae4e29463698d6d60bc6a4da69c89185ad1e0bcc4104f584e960b9ed
     # via
     #   -r requirements.in
     #   github-flask
