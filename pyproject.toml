@@ -40,3 +40,9 @@ line_length = 120
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=pypistats --cov-report=term-missing --cov-report=html"
+postgresql_user = "test"
+postgresql_password = "test"

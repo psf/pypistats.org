@@ -3,6 +3,12 @@
 # To install: pip install -r requirements-dev.txt
 
 # Development tools only - production deps are in requirements.txt
+-c requirements.txt
 black
 isort>=5.3
 pip-tools
+pytest
+pytest-cov
+pytest-flask
+pytest-postgresql
+psycopg[binary]

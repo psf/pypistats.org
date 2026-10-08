@@ -68,6 +68,7 @@ class TestConfig(Config):
     ENV = "dev"
     TESTING = True
     WTF_CSRF_ENABLED = False  # Allows form testing
+    RATELIMIT_ENABLED = False
 
 
 configs = {"development": DevConfig, "local": LocalConfig, "production": ProdConfig, "test": TestConfig}
