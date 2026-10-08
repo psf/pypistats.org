@@ -4,6 +4,7 @@ import datetime
 import re
 from collections import defaultdict
 from copy import deepcopy
+from email.utils import getaddresses
 
 import requests
 from flask import Blueprint
@@ -64,6 +65,17 @@ def _split_dependencies(requires_dist):
                 continue
         requires.add(package_name)
     return sorted(requires), sorted(optional)
+
+
+def _get_author(info):
+    """Prefer Author, then the first Author-email display name, as Warehouse does."""
+    author = (info.get("author") or "").strip()
+    if author:
+        return author
+
+    # Warehouse's format_email filter uses RFC-822 parsing and the first address.
+    addresses = getaddresses([info.get("author_email") or ""])
+    return addresses[0][0].strip() if addresses else ""
 
 
 class PackageSearchForm(FlaskForm):
@@ -151,14 +163,9 @@ def package_page(package):
     if package != "__all__":
         try:
             metadata = requests.get(f"https://pypi.python.org/pypi/{package}/json", timeout=5).json()
+            metadata["author"] = _get_author(metadata["info"])
             if metadata["info"].get("requires_dist", None):
                 metadata["requires"], metadata["optional"] = _split_dependencies(metadata["info"]["requires_dist"])
-            author = metadata["info"].get("author")
-            if author is None:
-                authors = metadata["info"].get("author_email")
-                if authors:
-                    author = ", ".join([a.strip().rsplit(maxsplit=1)[0] for a in authors.split(",")])
-                    metadata["author"] = author
         except Exception:
             pass
 

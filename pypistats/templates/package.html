@@ -30,18 +30,20 @@
                 <a href="{{ homepage }}">Home page</a>
                 <br>
             {% endif %}
-            Author:
-            {{ metadata['info']['author'] }}
-            {% if metadata['info']['license'] is not none %}
+            {% if metadata['author'] %}
+                Author:
+                {{ metadata['author'] }}
                 <br>
+            {% endif %}
+            {% if metadata['info']['license'] is not none %}
                 License:
                 {% if metadata['info']['license'] | length > 200 %}
                     {{ metadata['info']['license'][:200] }}...
                 {% else %}
                     {{ metadata['info']['license'] }}
                 {% endif %}
+                <br>
             {% endif %}
-            <br>
             Summary:
             {{ metadata['info']['summary'] }}
             <br>
