@@ -8,7 +8,7 @@
 - `DATABASE_URL` - PostgreSQL connection URL (e.g., `postgresql://user:password@host:5432/dbname`)
 
 #### Redis Configuration
-- `REDIS_URL` - Redis connection URL (e.g., `redis://redis:6379/0`)
+- `REDIS_URL` - Redis connection URL for Celery, RedBeat, and shared rate-limit counters (e.g., `redis://redis:6379/0`)
 
 #### Google BigQuery Configuration
 - `GOOGLE_SERVICE_ACCOUNT_JSON` - Complete Google service account JSON (as a string)
@@ -37,7 +37,11 @@ For example, to allow 10 requests per second and 60 requests per minute:
 export RATELIMIT_DEFAULT="10 per second;60 per minute"
 ```
 
-All configured limits apply per client IP and Flask endpoint, independently in each worker.
+All configured limits apply per client IP and Flask endpoint, shared across workers and
+app instances using the same Redis database. Increasing the worker count does not increase
+the allowance. Rate-limit keys use the `pypistats` prefix.
+Flask-Limiter uses `REDIS_URL` through the `RATELIMIT_STORAGE_URI` application setting;
+Redis must be available for rate-limited web requests.
 For Docker Compose, set the variable in `.env` or export it before starting the services.
 Restart the web processes (or recreate the Compose web container) after changing the value.
 
@@ -71,7 +75,7 @@ Provides default values for local development:
 ## Services Required
 
 1. **PostgreSQL 16+** - Primary database for storing aggregated statistics
-2. **Redis 7+** - Message broker for Celery background tasks
+2. **Redis 7+** - Celery message broker, RedBeat scheduler storage, and shared web rate-limit counters
 3. **Google BigQuery Access** - For querying PyPI public download data
    - Requires a service account with BigQuery Data Viewer permissions
    - The service account JSON includes the project ID automatically

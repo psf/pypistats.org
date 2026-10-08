@@ -25,6 +25,7 @@ services:
     command: webdev
     depends_on:
       - postgresql
+      - redis
     <<: *envs
     ports:
       - "8000:5000"
