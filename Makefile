@@ -28,7 +28,7 @@ setup:
 # update requirements files
 update-deps:
 	pip-compile --generate-hashes --resolver=backtracking requirements.in -o requirements.txt
-	pip-compile --generate-hashes --resolver=backtracking requirements-dev.in -o requirements-dev.txt
+	pip-compile --allow-unsafe --generate-hashes --resolver=backtracking requirements-dev.in -o requirements-dev.txt
 
 
 # port forward flower
