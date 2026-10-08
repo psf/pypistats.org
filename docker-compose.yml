@@ -6,6 +6,7 @@ x-envs: &envs
     - FLASK_DEBUG=1
     - DATABASE_URL=${DATABASE_URL:-postgresql://admin:root@postgresql:5432/pypistats}
     - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    - RATELIMIT_DEFAULT=${RATELIMIT_DEFAULT:-5 per second;30 per minute}
     - BASIC_AUTH_USER=${BASIC_AUTH_USER:-user}
     - BASIC_AUTH_PASSWORD=${BASIC_AUTH_PASSWORD:-password}
     - PYPISTATS_SECRET=${PYPISTATS_SECRET:-dev-secret-key}

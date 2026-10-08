@@ -28,6 +28,19 @@
 - `FLASK_ENV` - Flask environment (`development` or `production`)
 - `FLASK_DEBUG` - Enable Flask debug mode (`1` for true, `0` for false)
 
+#### Rate Limiting
+- `RATELIMIT_DEFAULT` - Semicolon-separated limits using [Flask-Limiter's notation](https://flask-limiter.readthedocs.io/en/stable/configuration.html#rate-limit-string-notation). Defaults to `5 per second;30 per minute` when unset or blank.
+
+For example, to allow 10 requests per second and 60 requests per minute:
+
+```bash
+export RATELIMIT_DEFAULT="10 per second;60 per minute"
+```
+
+All configured limits apply per client IP and Flask endpoint, independently in each worker.
+For Docker Compose, set the variable in `.env` or export it before starting the services.
+Restart the web processes (or recreate the Compose web container) after changing the value.
+
 #### Deployment Configuration
 - `PORT` - Port for web server to bind to (defaults to `5000`)
 - `BIND_UNIX_SOCKET` - If set, bind to Unix socket at `/var/run/cabotage/cabotage.sock` instead of TCP port

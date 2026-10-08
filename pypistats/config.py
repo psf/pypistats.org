@@ -32,6 +32,7 @@ class Config:
     SECRET_KEY = os.environ.get("PYPISTATS_SECRET", "secret-key")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_DATABASE_URI = get_db_uri()
+    RATELIMIT_DEFAULT = os.environ.get("RATELIMIT_DEFAULT", "").strip() or "5 per second;30 per minute"
 
     # Plotly chart definitions
     PLOT_BASE = json.load(open(os.path.join(os.path.dirname(__file__), "plots", "plot_base.json")))
