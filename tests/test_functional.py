@@ -200,6 +200,23 @@ def test_update_reaches_api_ui_and_totals_and_can_be_rerun(client, date, update)
         assert_package_page(client, date, downloads, downloads + 20, downloads + 20)
 
 
+def test_direct_streaming_updates_batches_and_aggregates(client, date, pypi, bigquery):
+    columns = {"package": 0, "category_label": 1, "category": 2, "downloads": 3}
+    for downloads in [3_000_000_000, 50]:
+        rows = [
+            ("sample-package", table, category, downloads)
+            for table, category in zip(pypi.PSQL_TABLES, ["without_mirrors", "3", "3.13", "Linux"])
+        ]
+        rows.extend((f"other-{count}", "overall", "without_mirrors", count) for count in [1, 2, 3])
+        bigquery.return_value = iter(pypi.bigquery.Row(row, columns) for row in rows)
+        result = pypi.etl.apply(args=(str(date),), kwargs={"use_sqlite": False}, throw=True).get()
+        assert result["downloads"]["batches_processed"] > 0
+        assert all(result["downloads"][table] for table in pypi.PSQL_TABLES)
+        assert all(result["__all__"][table] for table in pypi.PSQL_TABLES)
+        assert get_json(client, "/api/packages/sample-package/recent")["data"]["last_day"] == downloads
+        assert get_json(client, "/api/packages/__all__/recent")["data"]["last_day"] == downloads + 6
+
+
 def test_retention_boundary(postgresql, date, update, pypi):
     cutoff = date - datetime.timedelta(days=180)
     for day in [cutoff - datetime.timedelta(days=1), cutoff]:

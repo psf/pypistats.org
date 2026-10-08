@@ -33,9 +33,10 @@ setup:
 	pip install -r requirements-dev.txt
 
 # update requirements files
+.PHONY: update-deps
 update-deps:
-	pip-compile --generate-hashes --resolver=backtracking requirements.in -o requirements.txt
-	pip-compile --allow-unsafe --generate-hashes --resolver=backtracking requirements-dev.in -o requirements-dev.txt
+	pip-compile --upgrade --generate-hashes --resolver=backtracking requirements.in -o requirements.txt
+	pip-compile --upgrade --allow-unsafe --generate-hashes --resolver=backtracking requirements-dev.in -o requirements-dev.txt
 
 
 # port forward flower

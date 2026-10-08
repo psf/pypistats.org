@@ -129,7 +129,7 @@ pypistats/
 - Flask & extensions (SQLAlchemy, Migrate, Login, WTF, Limiter, HTTPAuth)
 - Google Cloud BigQuery client
 - Celery & Redis
-- PostgreSQL (psycopg2)
+- PostgreSQL (psycopg 3)
 - Requests
 - Gunicorn (production server)
 

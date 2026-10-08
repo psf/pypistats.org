@@ -8,7 +8,10 @@ from flask import json
 
 def get_db_uri():
     """Get the database URI."""
-    return os.environ.get("DATABASE_URL")
+    uri = os.environ.get("DATABASE_URL")
+    if uri and uri.startswith("postgresql://"):
+        return uri.replace("postgresql://", "postgresql+psycopg://", 1)
+    return uri
 
 
 class Config:

@@ -148,7 +148,7 @@ def package_page(package):
     except ValueError:
         lookback = 180
 
-    start_date = str(datetime.date.today() - datetime.timedelta(lookback))
+    start_date = datetime.date.today() - datetime.timedelta(lookback)
 
     recent_downloads = RecentDownloadCount.query.filter_by(package=package).all()
 

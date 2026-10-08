@@ -39,8 +39,9 @@ def app(postgresql, postgresql_server, monkeypatch):
     from pypistats.run import app
 
     # Reject an app imported with another database before touching its schema.
-    assert app.config["SQLALCHEMY_DATABASE_URI"] == database_url
+    assert app.config["SQLALCHEMY_DATABASE_URI"] == database_url.replace("postgresql://", "postgresql+psycopg://", 1)
     with app.app_context():
+        assert db.engine.driver == "psycopg"
         upgrade()
     yield app
     with app.app_context():
