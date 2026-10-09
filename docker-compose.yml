@@ -1,18 +1,16 @@
 x-envs: &envs
+  env_file: .env
   environment:
     - FLASK_APP=pypistats/run.py
     - FLASK_ENV=development
     - FLASK_DEBUG=1
-    - POSTGRESQL_HOST=postgresql
-    - POSTGRESQL_PORT=5432
-    - POSTGRESQL_USERNAME=admin
-    - POSTGRESQL_PASSWORD=root
-    - POSTGRESQL_DBNAME=pypistats
-    - CELERY_BROKER_URL=redis://redis
-    - BASIC_AUTH_USER=user
-    - BASIC_AUTH_PASSWORD=password
-
-version: "3.4"
+    - DATABASE_URL=${DATABASE_URL:-postgresql://admin:root@postgresql:5432/pypistats}
+    - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    - RATELIMIT_DEFAULT=${RATELIMIT_DEFAULT:-5 per second;30 per minute}
+    - BASIC_AUTH_USER=${BASIC_AUTH_USER:-user}
+    - BASIC_AUTH_PASSWORD=${BASIC_AUTH_PASSWORD:-password}
+    - PYPISTATS_SECRET=${PYPISTATS_SECRET:-dev-secret-key}
+    - GOOGLE_SERVICE_ACCOUNT_JSON=${GOOGLE_SERVICE_ACCOUNT_JSON:-}
 
 volumes:
   pgdata: {}
@@ -21,36 +19,37 @@ services:
   web:
     build:
       context: .
+      args:
+        DEVEL: "yes"
+    image: web
     command: webdev
     depends_on:
       - postgresql
+      - redis
     <<: *envs
     ports:
-      - "5000:5000"
+      - "8000:5000"
     volumes:
-      - "./pypistats/:/app/pypistats/"
+      - "./:/app/"
   beat:
-    build:
-      context: .
+    image: web
     command: beat
     depends_on:
       - redis
     <<: *envs
     volumes:
-      - "./pypistats/:/app/pypistats/"
+      - "./:/app/"
   celery:
-    build:
-      context: .
+    image: web
     command: celery
     depends_on:
       - redis
       - postgresql
     <<: *envs
     volumes:
-      - "./pypistats/:/app/pypistats/"
+      - "./:/app/"
   flower:
-    build:
-      context: .
+    image: web
     command: flower
     depends_on:
       - redis
@@ -58,38 +57,39 @@ services:
     ports:
       - "5555:5555"
     volumes:
-      - "./pypistats/:/app/pypistats/"
+      - "./:/app/"
   migrate:
-    build:
-      context: .
+    image: web
     command: migrate
     depends_on:
       - postgresql
     <<: *envs
     volumes:
-      - "./pypistats/:/app/pypistats/"
-      - "./migrations/:/app/migrations/"
+      - "./:/app/"
   seeds:
-    build:
-      context: .
+    image: web
     command: seeds
     depends_on:
       - postgresql
       - migrate
     <<: *envs
     volumes:
-      - "./pypistats/:/app/pypistats/"
-      - "./migrations/:/app/migrations/"
+      - "./:/app/"
   redis:
-    image: "redis:5.0.7-alpine"
+    image: "redis:7-alpine"
     ports:
       - "6379:6379"
   postgresql:
-    image: "postgres:12"
+    image: "postgres:16"
     environment:
       - POSTGRES_USER=admin
       - POSTGRES_PASSWORD=root
       - POSTGRES_DB=pypistats
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
     ports:
       - "5433:5432"
     volumes:

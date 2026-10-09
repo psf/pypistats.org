@@ -1,0 +1,7 @@
+version: 2
+updates:
+  # pip also supports the requirements.in / requirements.txt pairs from pip-tools.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly

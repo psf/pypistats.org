@@ -1,4 +1,5 @@
 """Flask extensions."""
+
 from celery import Celery
 from flask_github import GitHub
 from flask_httpauth import HTTPBasicAuth
@@ -15,8 +16,7 @@ auth = HTTPBasicAuth()
 
 def create_celery(name=__name__, config=Config):
     """Create a celery object."""
-    redis_uri = "redis://localhost:6379"
-    celery = Celery(name, broker=redis_uri)
+    celery = Celery(name)
     celery.config_from_object(config)
     return celery
 

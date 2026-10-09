@@ -25,20 +25,25 @@
         {% if metadata %}
             <a href="{{ metadata['info']['package_url'] }}">PyPI page</a>
             <br>
-            <a href="{{ metadata['info']['home_page'] }}">Home page</a>
-            <br>
-            Author:
-            {{ metadata['info']['author'] }}
-            {% if metadata['info']['license'] is not none %}
+            {% set homepage = metadata['info'].get('home_page') or (metadata['info'].get('project_urls') or {}).get('Homepage') %}
+            {% if homepage %}
+                <a href="{{ homepage }}">Home page</a>
                 <br>
+            {% endif %}
+            {% if metadata['author'] %}
+                Author:
+                {{ metadata['author'] }}
+                <br>
+            {% endif %}
+            {% if metadata['info']['license'] is not none %}
                 License:
                 {% if metadata['info']['license'] | length > 200 %}
                     {{ metadata['info']['license'][:200] }}...
                 {% else %}
                     {{ metadata['info']['license'] }}
                 {% endif %}
+                <br>
             {% endif %}
-            <br>
             Summary:
             {{ metadata['info']['summary'] }}
             <br>
@@ -46,9 +51,17 @@
             {{ metadata['info']['version'] }}
             <br>
             {% if metadata['requires'] %}
-                Requires:
+                Required dependencies:
                 {% for required in metadata['requires'] %}
                     <a href="{{ url_for('general.package_page', package=required.lower()) }}">{{ required.lower() }}</a>
+                    {% if not loop.last %}|{% endif %}
+                {% endfor %}
+            {% endif %}
+            {% if metadata['optional'] %}
+                <br>
+                Optional dependencies:
+                {% for optional in metadata['optional'] %}
+                    <a href="{{ url_for('general.package_page', package=optional.lower()) }}">{{ optional.lower() }}</a>
                     {% if not loop.last %}|{% endif %}
                 {% endfor %}
             {% endif %}

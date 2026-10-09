@@ -1,0 +1,21 @@
+# Production dependencies for pypistats.org
+# To update all dependencies and hashes: make update-deps
+# To install: pip install -r requirements.txt
+
+google-cloud-bigquery
+flask
+github-flask
+flask-sqlalchemy
+flask-migrate
+flask-login
+flask-wtf
+gunicorn
+requests
+packaging
+celery
+celery-redbeat
+psycopg[binary]
+redis
+flask-limiter
+flower
+flask-httpauth

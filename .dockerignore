@@ -20,6 +20,13 @@ README.rst
 *.py[cod]
 **/__pycache__/
 
+# test and coverage output
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
 # celery
 celerybeat-schedule
 celerybeat.pid

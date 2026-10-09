@@ -22,5 +22,24 @@ PyPI Stats provides a simple JSON API to retrieve aggregate download stats and t
 Development
 -----------
 
-Run ``make pypistats`` to launch a complete development environment using docker-compose.
+1. Copy ``.env.example`` to ``.env`` and configure your environment variables:
+   
+   .. code-block:: bash
+   
+      cp .env.example .env
+      # Edit .env with your configuration
 
+2. Run ``make pypistats`` to launch a complete development environment using docker-compose.
+
+Functional tests
+----------------
+
+After setting up ``.env`` as above, run:
+
+.. code-block:: bash
+
+   make test
+
+This runs the tests in Docker Compose using isolated PostgreSQL databases and
+reports code coverage in the terminal and at ``htmlcov/index.html``.
+PostgreSQL remains running afterward.

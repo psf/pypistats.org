@@ -1,4 +1,5 @@
 """User page for tracking packages."""
+
 from flask import Blueprint
 from flask import abort
 from flask import flash
@@ -34,13 +35,9 @@ def authorized(oauth_token):
         flash("Authorization failed.")
         return redirect(next_url)
 
-    # Ensure a user with token doesn't already exist
-    this_user = User.query.filter_by(token=oauth_token).first()
-    if this_user is None:
-        this_user = User(token=oauth_token)
-
-    # Set this to use API to get user data
-    g.user = this_user
+    # Create a temporary user object to use the GitHub API
+    temp_user = User(token=oauth_token)
+    g.user = temp_user
     user_data = github.get("user")
 
     # extract data
@@ -48,11 +45,13 @@ def authorized(oauth_token):
     username = user_data["login"]
     avatar_url = user_data["avatar_url"]
 
-    # Create/update the user
+    # Look for existing user by GitHub UID (this persists across GitHub app migrations)
     this_user = User.query.filter_by(uid=uid).first()
     if this_user is None:
+        # New user - create with all the data
         this_user = User(token=oauth_token, uid=uid, username=username, avatar_url=avatar_url)
     else:
+        # Existing user - update their data including the new token
         this_user.username = username
         this_user.avatar_url = avatar_url
         this_user.token = oauth_token

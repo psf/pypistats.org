@@ -1,4 +1,5 @@
 """Package stats tables."""
+
 from pypistats.database import Column
 from pypistats.database import Model
 from pypistats.extensions import db
@@ -13,7 +14,7 @@ class OverallDownloadCount(Model):
     package = Column(db.String(128), primary_key=True, nullable=False, index=True)
     # with_mirrors or without_mirrors
     category = Column(db.String(16), primary_key=True, nullable=False)
-    downloads = Column(db.Integer(), nullable=False)
+    downloads = Column(db.BigInteger(), nullable=False)
 
     def __repr__(self):
         return "<OverallDownloadCount {}".format(f"{str(self.date)} - {str(self.package)} - {str(self.category)}")
@@ -28,7 +29,7 @@ class PythonMajorDownloadCount(Model):
     package = Column(db.String(128), primary_key=True, nullable=False, index=True)
     # python_major version, 2 or 3 (or null)
     category = Column(db.String(4), primary_key=True, nullable=True)
-    downloads = Column(db.Integer(), nullable=False)
+    downloads = Column(db.BigInteger(), nullable=False)
 
     def __repr__(self):
         return "<PythonMajorDownloadCount {}".format(f"{str(self.date)} - {str(self.package)} - {str(self.category)}")
@@ -43,7 +44,7 @@ class PythonMinorDownloadCount(Model):
     package = Column(db.String(128), primary_key=True, nullable=False, index=True)
     # python_minor version, e.g. 2.7 or 3.6 (or null)
     category = Column(db.String(4), primary_key=True, nullable=True)
-    downloads = Column(db.Integer(), nullable=False)
+    downloads = Column(db.BigInteger(), nullable=False)
 
     def __repr__(self):
         return "<PythonMinorDownloadCount {}".format(f"{str(self.date)} - {str(self.package)} - {str(self.category)}")
@@ -75,7 +76,7 @@ class SystemDownloadCount(Model):
     package = Column(db.String(128), primary_key=True, nullable=False, index=True)
     # system, e.g. Windows or Linux or Darwin (or null)
     category = Column(db.String(8), primary_key=True, nullable=True)
-    downloads = Column(db.Integer(), nullable=False)
+    downloads = Column(db.BigInteger(), nullable=False)
 
     def __repr__(self):
         return "<SystemDownloadCount {}".format(f"{str(self.date)} - {str(self.package)} - {str(self.category)}")

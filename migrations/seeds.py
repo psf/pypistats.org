@@ -21,15 +21,18 @@ if db.session.query(RecentDownloadCount.package).count() > 0:
     sys.exit(0)
 
 # use the currently installed dependencies as seed packages
-result = subprocess.run(["poetry", "show"], stdout=subprocess.PIPE)
+result = subprocess.run(["pip", "list", "--format=freeze"], stdout=subprocess.PIPE)
 output = result.stdout.decode()
 
 # extract just the package names from the output
-# skip the first line which is a poetry warning
-# and the last line which is empty
 packages = []
-for line in output.split("\n")[1:-1]:
-    packages.append(line.split(" ")[0])
+for line in output.split("\n"):
+    if "==" in line:
+        packages.append(line.split("==")[0])
+
+# add some packages that have optional dependencies
+packages.append("apache-airflow")
+packages.append("databricks-dbapi")
 
 logging.info(packages)
 
@@ -51,7 +54,6 @@ for package in packages + ["__all__"]:
         records.append(record)
 
     for date in date_list:
-
         for idx, category in enumerate(["with_mirrors", "without_mirrors"]):
             record = OverallDownloadCount(
                 date=date,
@@ -61,7 +63,7 @@ for package in packages + ["__all__"]:
             )
             records.append(record)
 
-        for idx, category in enumerate(["2", "3"]):
+        for idx, category in enumerate(["null", "2", "3"]):
             record = PythonMajorDownloadCount(
                 date=date,
                 package=package,
@@ -70,7 +72,9 @@ for package in packages + ["__all__"]:
             )
             records.append(record)
 
-        for idx, category in enumerate(["2.7", "3.4", "3.5", "3.6", "3.7", "3.8"]):
+        for idx, category in enumerate(
+            ["null", "2.7", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
+        ):
             record = PythonMinorDownloadCount(
                 date=date,
                 package=package,
@@ -79,7 +83,7 @@ for package in packages + ["__all__"]:
             )
             records.append(record)
 
-        for idx, category in enumerate(["windows", "linux", "darwin"]):
+        for idx, category in enumerate(["null", "windows", "linux", "darwin"]):
             record = SystemDownloadCount(
                 date=date,
                 package=package,

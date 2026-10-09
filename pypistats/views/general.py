@@ -1,8 +1,10 @@
 """General pages."""
+
 import datetime
 import re
 from collections import defaultdict
 from copy import deepcopy
+from email.utils import getaddresses
 
 import requests
 from flask import Blueprint
@@ -12,6 +14,10 @@ from flask import redirect
 from flask import render_template
 from flask import request
 from flask_wtf import FlaskForm
+from packaging.markers import Variable
+from packaging.requirements import InvalidRequirement
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
 from wtforms import StringField
 from wtforms.validators import DataRequired
 
@@ -26,6 +32,50 @@ blueprint = Blueprint("general", __name__, template_folder="templates")
 
 
 MODELS = [OverallDownloadCount, PythonMajorDownloadCount, PythonMinorDownloadCount, SystemDownloadCount]
+
+
+def _marker_mentions_extra(marker):
+    if marker is None:
+        return False
+
+    def _contains_extra(markers):
+        for marker_part in markers:
+            if isinstance(marker_part, list):
+                if _contains_extra(marker_part):
+                    return True
+            elif isinstance(marker_part, tuple) and isinstance(marker_part[0], Variable):
+                if marker_part[0].value == "extra":
+                    return True
+        return False
+
+    return _contains_extra(marker._markers)
+
+
+def _split_dependencies(requires_dist):
+    requires, optional = set(), set()
+    for dependency in requires_dist:
+        try:
+            requirement = Requirement(dependency)
+        except InvalidRequirement:
+            package_name = re.split(r"[^0-9a-zA-Z_.-]+", dependency.lower())[0]
+        else:
+            package_name = canonicalize_name(requirement.name)
+            if _marker_mentions_extra(requirement.marker):
+                optional.add(package_name)
+                continue
+        requires.add(package_name)
+    return sorted(requires), sorted(optional)
+
+
+def _get_author(info):
+    """Prefer Author, then the first Author-email display name, as Warehouse does."""
+    author = (info.get("author") or "").strip()
+    if author:
+        return author
+
+    # Warehouse's format_email filter uses RFC-822 parsing and the first address.
+    addresses = getaddresses([info.get("author_email") or ""])
+    return addresses[0][0].strip() if addresses else ""
 
 
 class PackageSearchForm(FlaskForm):
@@ -46,8 +96,10 @@ def index():
 
 
 @blueprint.route("/health")
+@blueprint.route("/_health/")
 def health():
-    return "OK"
+    """Health check endpoint."""
+    return "OK", 200
 
 
 @blueprint.route("/search/<package>", methods=("GET", "POST"))
@@ -96,7 +148,7 @@ def package_page(package):
     except ValueError:
         lookback = 180
 
-    start_date = str(datetime.date.today() - datetime.timedelta(lookback))
+    start_date = datetime.date.today() - datetime.timedelta(lookback)
 
     recent_downloads = RecentDownloadCount.query.filter_by(package=package).all()
 
@@ -111,11 +163,9 @@ def package_page(package):
     if package != "__all__":
         try:
             metadata = requests.get(f"https://pypi.python.org/pypi/{package}/json", timeout=5).json()
+            metadata["author"] = _get_author(metadata["info"])
             if metadata["info"].get("requires_dist", None):
-                requires = set()
-                for required in metadata["info"]["requires_dist"]:
-                    requires.add(re.split(r"[^0-9a-zA-Z_.-]+", required)[0])
-                metadata["requires"] = sorted(list(requires))
+                metadata["requires"], metadata["optional"] = _split_dependencies(metadata["info"]["requires_dist"])
         except Exception:
             pass
 
@@ -134,13 +184,20 @@ def package_page(package):
         else:
             metrics = ["downloads", "percentages"]
 
-        use_smoothing = metadata['use_smoothing'] = request.args.get('smooth', None) is not None
+        use_smoothing = metadata["use_smoothing"] = request.args.get("smooth", None) is not None
+        if model == PythonMinorDownloadCount:
+            category_key = python_minor_key
+        else:
+            category_key = None
+
         for metric in metrics:
-            model_data.append({
-                "metric": metric,
-                "name": model.__tablename__,
-                "data": data_function[metric](records, use_smoothing=use_smoothing),
-            })
+            model_data.append(
+                {
+                    "metric": metric,
+                    "name": model.__tablename__,
+                    "data": data_function[metric](records, category_key=category_key, use_smoothing=use_smoothing),
+                }
+            )
 
     # Build the plots
     plots = []
@@ -193,8 +250,7 @@ def package_page(package):
 
 def smooth_data(data, window=7):
     # Ensure data is sorted by date
-    data["x"], data["y"] = zip(*[(x, y) for x, y in sorted(
-        zip(data["x"], data["y"]), key=lambda pair: pair[0])])
+    data["x"], data["y"] = zip(*[(x, y) for x, y in sorted(zip(data["x"], data["y"]), key=lambda pair: pair[0])])
     # Smooth data on a rolling window
     smoothed_data = deepcopy(data)
     smoothed_data["y"] = list(smoothed_data["y"])
@@ -206,7 +262,16 @@ def smooth_data(data, window=7):
     return smoothed_data
 
 
-def get_download_data(records, use_smoothing=False):
+def python_minor_key(version):
+    try:
+        key = [""] + [int(p) for p in version.split(".")]
+    except ValueError:
+        key = [version]
+
+    return key
+
+
+def get_download_data(records, category_key=None, use_smoothing=False):
     """Organize the data for the absolute plots."""
     data = defaultdict(lambda: {"x": [], "y": []})
 
@@ -219,14 +284,13 @@ def get_download_data(records, use_smoothing=False):
         if record.category not in all_categories:
             all_categories.append(record.category)
 
-    all_categories = sorted(all_categories)
+    all_categories = sorted(all_categories, key=category_key)
     for category in all_categories:
         data[category]  # set the dict value (keeps it ordered)
 
     for record in records:
         # Fill missing intermediate dates with zeros
         if record.date != prev_date:
-
             for category in all_categories:
                 if category not in date_categories:
                     data[category]["x"].append(str(prev_date))
@@ -265,7 +329,7 @@ def get_download_data(records, use_smoothing=False):
     return data
 
 
-def get_proportion_data(records, use_smoothing=False):
+def get_proportion_data(records, category_key=None, use_smoothing=False):
     """Organize the data for the fill plots."""
     data = defaultdict(lambda: {"x": [], "y": [], "text": []})
 
@@ -278,13 +342,12 @@ def get_proportion_data(records, use_smoothing=False):
         if record.category not in all_categories:
             all_categories.append(record.category)
 
-    all_categories = sorted(all_categories)
+    all_categories = sorted(all_categories, key=category_key)
     for category in all_categories:
         data[category]  # set the dict value (keeps it ordered)
 
     for record in records:
         if record.date != prev_date:
-
             total = sum(date_categories.values()) / 100
             for category in all_categories:
                 data[category]["x"].append(str(prev_date))

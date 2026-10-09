@@ -1,4 +1,5 @@
 """Database classes and models."""
+
 from pypistats.extensions import db
 
 Column = db.Column

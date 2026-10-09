@@ -8,7 +8,7 @@
         Index in lieu of having to execute queries against raw download records in Google BigQuery.</p>
     <h3>Data</h3>
     <p>Download stats are sourced from the Python Software Foundation's publicly available
-        <a href="https://bigquery.cloud.google.com/table/the-psf:pypi.downloads">download stats</a>
+        <a href="https://console.cloud.google.com/bigquery?ws=!1m5!1m4!4m3!1sbigquery-public-data!2spypi!3sfile_downloads">download stats</a>
         on Google BigQuery. All aggregate download stats ignore known PyPI mirrors (such as
         <a href="{{ url_for('general.package_page', package='bandersnatch') }}">bandersnatch</a>) unless noted
         otherwise.</p>
@@ -32,9 +32,12 @@
                 href="https://github.com/hugovk/pypistats"><img src="https://img.shields.io/pypi/dm/pypistats.svg"></a>
         </li>
     </ul>
-    <p>PyPIStats.org is also <a href="https://github.com/crflynn/pypistats.org">open source</a>.</p>
+    <p>PyPIStats.org is also <a href="https://github.com/psf/pypistats.org">open source</a>.</p>
     <h3>Who</h3>
-    <p>PyPI Stats was created by
+    <p>
+        This service is hosted and operated by <a href="https://python.org/psf/">The Python Software Foundation</a>.
+    </p>
+    <p>PyPI Stats was created by and hosted for over seven years by
         <a href="https://flynn.gg">Christopher Flynn</a>.
     </p>
     <p>

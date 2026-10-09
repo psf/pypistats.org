@@ -1,4 +1,5 @@
 """Run the application."""
+
 import os
 
 from flask import g
@@ -18,9 +19,9 @@ env = os.environ.get("ENV", "development")
 
 app = create_app(configs[env])
 
-# Rate limiting per IP/worker
-app.wsgi_app = ProxyFix(app.wsgi_app)
-limiter = Limiter(app, key_func=get_remote_address, application_limits=["5 per second", "30 per minute"])
+# Rate limiting per IP and endpoint, shared across workers through Redis
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=2)
+limiter = Limiter(get_remote_address, app=app, key_prefix="pypistats", headers_enabled=True)
 
 app.logger.info(f"Environment: {env}")
 
