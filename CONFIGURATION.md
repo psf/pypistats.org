@@ -66,7 +66,7 @@ Web server configuration that uses:
 - `WEB_CONCURRENCY` for worker count
 - `LOG_LEVEL` for logging verbosity
 
-### Docker Compose (`docker-compose.yml`)
+### Docker Compose (`compose.yaml`)
 Provides default values for local development:
 - PostgreSQL: `admin`/`root` on port 5433
 - Redis: port 6379

@@ -1,16 +1,15 @@
 x-envs: &envs
   env_file: .env
   environment:
-    - FLASK_APP=pypistats/run.py
-    - FLASK_ENV=development
-    - FLASK_DEBUG=1
-    - DATABASE_URL=${DATABASE_URL:-postgresql://admin:root@postgresql:5432/pypistats}
-    - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-    - RATELIMIT_DEFAULT=${RATELIMIT_DEFAULT:-5 per second;30 per minute}
-    - BASIC_AUTH_USER=${BASIC_AUTH_USER:-user}
-    - BASIC_AUTH_PASSWORD=${BASIC_AUTH_PASSWORD:-password}
-    - PYPISTATS_SECRET=${PYPISTATS_SECRET:-dev-secret-key}
-    - GOOGLE_SERVICE_ACCOUNT_JSON=${GOOGLE_SERVICE_ACCOUNT_JSON:-}
+    FLASK_APP: pypistats/run.py
+    FLASK_ENV: development
+    FLASK_DEBUG: 1
+    DATABASE_URL: ${DATABASE_URL:-postgresql://admin:root@postgresql:5432/pypistats}
+    REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    BASIC_AUTH_USER: ${BASIC_AUTH_USER:-user}
+    BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:-password}
+    PYPISTATS_SECRET: ${PYPISTATS_SECRET:-dev-secret-key}
+    GOOGLE_SERVICE_ACCOUNT_JSON: ${GOOGLE_SERVICE_ACCOUNT_JSON:-}
 
 volumes:
   pgdata: {}
@@ -82,9 +81,9 @@ services:
   postgresql:
     image: "postgres:16"
     environment:
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=root
-      - POSTGRES_DB=pypistats
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: pypistats
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 2s

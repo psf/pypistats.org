@@ -15,7 +15,7 @@ test:
 	docker compose run --build --rm --no-deps -T --entrypoint python web -m pytest -q \
 		--postgresql-host=postgresql --postgresql-port=5432 --postgresql-user=admin --postgresql-password=root
 
-# launch the application in docker-compose
+# launch the application in docker compose
 .PHONY: pypistats
 pypistats:
 	docker compose down

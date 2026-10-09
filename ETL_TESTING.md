@@ -136,7 +136,7 @@ docker compose exec postgresql psql -U admin -d pypistats -c "SELECT * FROM over
 ### Common Issues
 
 1. **"GOOGLE_SERVICE_ACCOUNT_JSON environment variable is required"**
-   - Ensure the environment variable is set in docker-compose.yml or .env file
+   - Ensure the environment variable is set in compose.yaml or .env file
    - The JSON must be a valid, complete service account key
 
 2. **BigQuery Permission Denied**
@@ -172,7 +172,7 @@ BASIC_AUTH_PASSWORD=secret
 PYPISTATS_SECRET=dev-secret-key
 ```
 
-Then update docker-compose.yml to use the .env file:
+Then update compose.yaml to use the .env file:
 ```yaml
 x-envs: &envs
   env_file: .env

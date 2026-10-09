@@ -3,6 +3,9 @@
 .gitignoreold
 .dockerignore
 .tool-versions
+compose.yaml
+compose.yml
+docker-compose.yaml
 docker-compose.yml
 envs/
 .venv/

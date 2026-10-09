@@ -155,7 +155,7 @@ pypistats/
 ## Deployment
 
 ### Docker:
-- Dockerfile and docker-compose.yml provided
+- Dockerfile and compose.yaml provided
 - docker-entrypoint.sh for container initialization
 
 ### Kubernetes:
