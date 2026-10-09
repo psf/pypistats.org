@@ -139,6 +139,9 @@ def test_package_metadata_and_charts(client, date):
 def test_pypi_unavailable(client, date, pypi_request):
     pypi_request.side_effect = requests.Timeout("PyPI unavailable")
     assert "No metadata found." in assert_package_page(client, date, 10, 30, 30)
+    response = client.get("/packages/sample-package?smooth=true")
+    assert response.status_code == 200
+    assert "No metadata found." in response.get_data(as_text=True)
 
 
 def test_all_packages_page(client, pypi_request):

@@ -171,6 +171,7 @@ def package_page(package):
 
     # Get data from db
     model_data = []
+    use_smoothing = request.args.get("smooth") is not None
     for model in MODELS:
         records = (
             model.query.filter_by(package=package)
@@ -184,7 +185,6 @@ def package_page(package):
         else:
             metrics = ["downloads", "percentages"]
 
-        use_smoothing = metadata["use_smoothing"] = request.args.get("smooth", None) is not None
         if model == PythonMinorDownloadCount:
             category_key = python_minor_key
         else:
@@ -245,7 +245,15 @@ def package_page(package):
 
         plots.append(plot)
 
-    return render_template("package.html", package=package, plots=plots, metadata=metadata, recent=recent, user=g.user)
+    return render_template(
+        "package.html",
+        package=package,
+        plots=plots,
+        metadata=metadata,
+        recent=recent,
+        user=g.user,
+        use_smoothing=use_smoothing,
+    )
 
 
 def smooth_data(data, window=7):
