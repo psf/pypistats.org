@@ -19,9 +19,9 @@ env = os.environ.get("ENV", "development")
 
 app = create_app(configs[env])
 
-# Rate limiting per IP/worker
+# Rate limiting per IP and endpoint, shared across workers through Redis
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=2)
-limiter = Limiter(get_remote_address, app=app, default_limits=["5 per second", "30 per minute"])
+limiter = Limiter(get_remote_address, app=app, key_prefix="pypistats", headers_enabled=True)
 
 app.logger.info(f"Environment: {env}")
 

@@ -8,7 +8,10 @@ from flask import json
 
 def get_db_uri():
     """Get the database URI."""
-    return os.environ.get("DATABASE_URL")
+    uri = os.environ.get("DATABASE_URL")
+    if uri and uri.startswith("postgresql://"):
+        return uri.replace("postgresql://", "postgresql+psycopg://", 1)
+    return uri
 
 
 class Config:
@@ -32,6 +35,8 @@ class Config:
     SECRET_KEY = os.environ.get("PYPISTATS_SECRET", "secret-key")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_DATABASE_URI = get_db_uri()
+    RATELIMIT_DEFAULT = os.environ.get("RATELIMIT_DEFAULT", "").strip() or "5 per second;30 per minute"
+    RATELIMIT_STORAGE_URI = broker_url
 
     # Plotly chart definitions
     PLOT_BASE = json.load(open(os.path.join(os.path.dirname(__file__), "plots", "plot_base.json")))
@@ -66,6 +71,7 @@ class TestConfig(Config):
     ENV = "dev"
     TESTING = True
     WTF_CSRF_ENABLED = False  # Allows form testing
+    RATELIMIT_ENABLED = False
 
 
 configs = {"development": DevConfig, "local": LocalConfig, "production": ProdConfig, "test": TestConfig}

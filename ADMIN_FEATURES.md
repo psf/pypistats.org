@@ -42,7 +42,7 @@ When you submit a date:
 2. The task runs asynchronously in the background
 3. You'll see confirmation: "{date} submitted"
 4. Monitor progress via:
-   - Celery logs: `docker-compose logs -f celery`
+   - Celery logs: `docker compose logs -f celery`
    - Flower dashboard: http://localhost:5555
 
 ## Scheduled ETL

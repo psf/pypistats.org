@@ -106,7 +106,7 @@ PyPIStats.org is a Flask-based web application that provides analytics and visua
 
 ### Setup:
 ```bash
-make pypistats  # Launch complete dev environment with docker-compose
+make pypistats  # Launch complete dev environment with Docker Compose
 ```
 
 ### Project Structure:
@@ -125,11 +125,11 @@ pypistats/
 ```
 
 ### Dependencies:
-- Python 3.7+
+- Python 3.14+
 - Flask & extensions (SQLAlchemy, Migrate, Login, WTF, Limiter, HTTPAuth)
 - Google Cloud BigQuery client
 - Celery & Redis
-- PostgreSQL (psycopg2)
+- PostgreSQL (psycopg 3)
 - Requests
 - Gunicorn (production server)
 
@@ -155,7 +155,7 @@ pypistats/
 ## Deployment
 
 ### Docker:
-- Dockerfile and docker-compose.yml provided
+- Dockerfile and compose.yaml provided
 - docker-entrypoint.sh for container initialization
 
 ### Kubernetes:

@@ -144,7 +144,8 @@ def backfill_sequential(
             # as it will use wrong date calculations
             result = etl(date_str, purge=False, use_sqlite=True, update_recent=False)
             results[date_str] = result
-            last_successful_date = date_str
+            if result["downloads"]["success"]:
+                last_successful_date = date_str
 
             # Add delay between days
             if current < end and delay_seconds > 0:

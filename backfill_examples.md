@@ -13,17 +13,17 @@ The backfill system provides several ways to populate historical PyPI download s
 
 ```bash
 # Check what data exists for July 2024
-docker-compose run --rm celery python manage_backfill.py status 2024-07-01 2024-07-31
+docker compose run --rm celery python manage_backfill.py status 2024-07-01 2024-07-31
 ```
 
 ### 2. Backfill Recent Days
 
 ```bash
 # Backfill last 7 days (skipping existing data)
-docker-compose run --rm celery python manage_backfill.py recent 7
+docker compose run --rm celery python manage_backfill.py recent 7
 
 # Or via Python
-docker-compose run --rm celery python -c "
+docker compose run --rm celery python -c "
 from pypistats.tasks.backfill import backfill_recent_days
 backfill_recent_days(30)  # Last 30 days
 "
@@ -33,7 +33,7 @@ backfill_recent_days(30)  # Last 30 days
 
 ```bash
 # Backfill July 2024, one day at a time, with 2-second delay between days
-docker-compose run --rm celery python manage_backfill.py sequential \
+docker compose run --rm celery python manage_backfill.py sequential \
     2024-07-01 2024-07-31 \
     --delay 2 \
     --skip-existing
@@ -43,7 +43,7 @@ docker-compose run --rm celery python manage_backfill.py sequential \
 
 ```bash
 # Backfill Q3 2024 with 3 parallel workers, 7 days per chunk
-docker-compose run --rm celery python manage_backfill.py parallel \
+docker compose run --rm celery python manage_backfill.py parallel \
     2024-07-01 2024-09-30 \
     --workers 3 \
     --chunk-days 7
@@ -53,7 +53,7 @@ docker-compose run --rm celery python manage_backfill.py parallel \
 
 ```bash
 # Backfill January through June 2024
-docker-compose run --rm celery python manage_backfill.py monthly \
+docker compose run --rm celery python manage_backfill.py monthly \
     2024-01 2024-06 \
     --delay 2 \
     --skip-existing
@@ -63,7 +63,7 @@ docker-compose run --rm celery python manage_backfill.py monthly \
 
 ```bash
 # Backfill all of 2024
-docker-compose run --rm celery python manage_backfill.py year 2024 --workers 2
+docker compose run --rm celery python manage_backfill.py year 2024 --workers 2
 ```
 
 ### 7. Custom Backfill via Python
@@ -92,10 +92,10 @@ if status['summary']['days_missing'] > 0:
 
 ```bash
 # Monitor active tasks
-docker-compose run --rm celery celery -A pypistats.extensions.celery inspect active
+docker compose run --rm celery celery -A pypistats.extensions.celery inspect active
 
 # Check task result
-docker-compose run --rm celery python -c "
+docker compose run --rm celery python -c "
 from celery.result import AsyncResult
 result = AsyncResult('YOUR_TASK_ID')
 print(f'Status: {result.status}')
@@ -128,19 +128,19 @@ For a fresh instance, backfill in stages:
 
 ```bash
 # 1. Last 7 days (for immediate data)
-docker-compose run --rm celery python manage_backfill.py recent 7
+docker compose run --rm celery python manage_backfill.py recent 7
 
 # 2. Current month
-docker-compose run --rm celery python manage_backfill.py monthly 2024-08 2024-08
+docker compose run --rm celery python manage_backfill.py monthly 2024-08 2024-08
 
 # 3. Previous 3 months (parallel)
-docker-compose run --rm celery python manage_backfill.py parallel \
+docker compose run --rm celery python manage_backfill.py parallel \
     2024-05-01 2024-07-31 \
     --workers 2 \
     --chunk-days 15
 
 # 4. Historical data (monthly batches)
-docker-compose run --rm celery python manage_backfill.py monthly \
+docker compose run --rm celery python manage_backfill.py monthly \
     2024-01 2024-04 \
     --delay 3 \
     --skip-existing
@@ -161,12 +161,12 @@ If a backfill fails:
 
 1. Check which dates completed:
    ```bash
-   docker-compose run --rm celery python manage_backfill.py status START_DATE END_DATE
+   docker compose run --rm celery python manage_backfill.py status START_DATE END_DATE
    ```
 
 2. Resume with `--skip-existing` flag:
    ```bash
-   docker-compose run --rm celery python manage_backfill.py sequential \
+   docker compose run --rm celery python manage_backfill.py sequential \
        START_DATE END_DATE \
        --skip-existing
    ```

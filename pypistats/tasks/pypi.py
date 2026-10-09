@@ -7,9 +7,9 @@ import tempfile
 import time
 from contextlib import contextmanager
 
-import psycopg2
+import psycopg
 from google.cloud import bigquery
-from psycopg2.extras import execute_values
+from psycopg import sql
 
 from pypistats.extensions import celery
 
@@ -52,8 +52,7 @@ def get_sqlite_db(date):
 
         # Create tables matching PostgreSQL structure
         for table in PSQL_TABLES:
-            cursor.execute(
-                f"""
+            cursor.execute(f"""
                 CREATE TABLE IF NOT EXISTS {table} (
                     date TEXT NOT NULL,
                     package TEXT NOT NULL,
@@ -61,8 +60,7 @@ def get_sqlite_db(date):
                     downloads INTEGER NOT NULL,
                     PRIMARY KEY (date, package, category)
                 )
-            """
-            )
+            """)
 
             # Create indexes AFTER bulk inserts for better performance
             # We'll create them later in the process
@@ -104,6 +102,7 @@ def process_batch_to_sqlite(cursor, table, rows):
     """Insert a batch of rows into SQLite table."""
     # Filter invalid rows
     valid_rows = []
+    invalid_python_minor_rows = 0
     for row in rows:
         # Convert None to 'null' string for SQLite compatibility
         # This preserves NULL Python versions which are valid data
@@ -123,7 +122,15 @@ def process_batch_to_sqlite(cursor, table, rows):
             if processed_row[2] in ("", "."):
                 continue
 
+        # Skip rows with versions like 3.100, which exceed 4 char limit of category
+        if table == "python_minor" and len(str(processed_row[2])) > 4:
+            invalid_python_minor_rows += 1
+            continue
+
         valid_rows.append(processed_row)
+
+    if invalid_python_minor_rows:
+        print(f"Skipped {invalid_python_minor_rows} invalid python_minor rows")
 
     if not valid_rows:
         return True
@@ -148,6 +155,16 @@ def process_batch_to_sqlite(cursor, table, rows):
     except sqlite3.Error as e:
         print(f"Error inserting into SQLite {table}: {e}")
         return False
+
+
+def copy_rows(cursor, table, rows, columns=("date", "package", "category", "downloads")):
+    """Bulk-load rows within the caller's transaction using PostgreSQL COPY."""
+    query = sql.SQL("COPY {} ({}) FROM STDIN").format(
+        sql.Identifier(table), sql.SQL(", ").join(map(sql.Identifier, columns))
+    )
+    with cursor.copy(query) as copy:
+        for row in rows:
+            copy.write_row(row)
 
 
 def transfer_sqlite_to_postgres(sqlite_cursor, date):
@@ -201,12 +218,7 @@ def transfer_sqlite_to_postgres(sqlite_cursor, date):
                         break
 
                     # Insert this chunk into PostgreSQL
-                    insert_query = f"""
-                        INSERT INTO {table} (date, package, category, downloads)
-                        VALUES %s
-                    """
-                    # Smaller page_size to reduce memory usage when building SQL
-                    execute_values(pg_cursor, insert_query, chunk, page_size=1000)
+                    copy_rows(pg_cursor, table, chunk)
 
                     chunks_transferred += 1
                     offset += TRANSFER_CHUNK_SIZE
@@ -221,7 +233,7 @@ def transfer_sqlite_to_postgres(sqlite_cursor, date):
 
         return True
 
-    except psycopg2.Error as e:
+    except psycopg.Error as e:
         print(f"Error during PostgreSQL transfer: {e}")
         pg_conn.rollback()
         return False
@@ -437,15 +449,11 @@ def update_table(connection, cursor, table, rows, date):
         print(delete_query)
         cursor.execute(delete_query)
 
-    insert_query = f"""INSERT INTO {table} (date, package, category, downloads)
-            VALUES %s"""
-
     try:
-        print(insert_query)
-        execute_values(cursor, insert_query, rows)
+        copy_rows(cursor, table, rows)
         connection.commit()
         return True
-    except psycopg2.IntegrityError as e:
+    except psycopg.IntegrityError as e:
         connection.rollback()
         return False
 
@@ -471,18 +479,15 @@ def update_all_package_stats(date=None):
 
         delete_query = f"""DELETE FROM {table}
                 WHERE date = %s and package = '__all__'"""
-        insert_query = f"""INSERT INTO {table} (date, package, category, downloads)
-                VALUES %s"""
         try:
             print(delete_query)
             cursor.execute(delete_query, (date,))
-            print(insert_query)
             if values:  # Only insert if there are values
-                execute_values(cursor, insert_query, values)
+                copy_rows(cursor, table, values)
                 print(f"Inserted {len(values)} __all__ records into {table}")
             connection.commit()
             success[table] = True
-        except psycopg2.IntegrityError as e:
+        except psycopg.IntegrityError as e:
             print(f"Error updating __all__ for {table}: {e}")
             connection.rollback()
             success[table] = False
@@ -527,16 +532,13 @@ def update_recent_stats(date=None):
 
         delete_query = f"""DELETE FROM {recent_table}
                 WHERE category = '{period}'"""
-        insert_query = f"""INSERT INTO {recent_table}
-               (package, category, downloads) VALUES %s"""
         try:
             print(delete_query)
             cursor.execute(delete_query)
-            print(insert_query)
-            execute_values(cursor, insert_query, values)
+            copy_rows(cursor, recent_table, values, columns=("package", "category", "downloads"))
             connection.commit()
             success[period] = True
-        except psycopg2.IntegrityError as e:
+        except psycopg.IntegrityError as e:
             connection.rollback()
             success[period] = False
 
@@ -547,7 +549,7 @@ def update_recent_stats(date=None):
 
 def get_connection_cursor():
     """Get a db connection cursor."""
-    connection = psycopg2.connect(os.environ["DATABASE_URL"])
+    connection = psycopg.connect(os.environ["DATABASE_URL"])
     cursor = connection.cursor()
     return connection, cursor
 
@@ -575,7 +577,7 @@ def purge_old_data(date=None):
             cursor.execute(delete_query)
             connection.commit()
             success[table] = True
-        except psycopg2.IntegrityError as e:
+        except psycopg.IntegrityError as e:
             connection.rollback()
             success[table] = False
 
@@ -587,7 +589,7 @@ def purge_old_data(date=None):
 def vacuum_analyze():
     """Vacuum and analyze the db."""
     connection, cursor = get_connection_cursor()
-    connection.set_isolation_level(0)
+    connection.autocommit = True
 
     results = {}
     start = time.time()
@@ -644,6 +646,8 @@ def get_query(date):
       dls
     WHERE
       installer NOT IN {str(MIRRORS)}
+      AND (python_version IS NULL OR
+        REGEXP_CONTAINS(python_version, r'^[0-9]\\.[0-9]{{1,2}}(\\.|$)'))
     GROUP BY
       package,
       category

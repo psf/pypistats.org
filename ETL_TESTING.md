@@ -17,7 +17,7 @@
 
 1. Start the services:
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
 2. Access the admin panel:
@@ -33,16 +33,16 @@
 
 1. Start all services:
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
 2. Trigger the ETL task manually:
    ```bash
    # Run ETL for yesterday's data (default)
-   docker-compose exec celery python -c "from pypistats.tasks.pypi import etl; etl.delay()"
+   docker compose exec celery python -c "from pypistats.tasks.pypi import etl; etl.delay()"
    
    # Run ETL for a specific date
-   docker-compose exec celery python -c "from pypistats.tasks.pypi import etl; etl.delay('2025-08-13')"
+   docker compose exec celery python -c "from pypistats.tasks.pypi import etl; etl.delay('2025-08-13')"
    ```
 
 3. Monitor the task in Flower:
@@ -54,12 +54,12 @@
 
 1. Start services:
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
 2. Enter Flask shell:
    ```bash
-   docker-compose exec web flask shell
+   docker compose exec web flask shell
    ```
 
 3. Run the ETL function directly (synchronously):
@@ -79,7 +79,7 @@
 
 1. Create a test script:
    ```bash
-   docker-compose exec web python
+   docker compose exec web python
    ```
 
 2. Test the BigQuery connection:
@@ -113,22 +113,22 @@
 
 ### Check Celery Logs
 ```bash
-docker-compose logs -f celery
+docker compose logs -f celery
 ```
 
 ### Check Celery Beat Schedule
 ```bash
-docker-compose logs -f beat
+docker compose logs -f beat
 ```
 
 ### Verify Database Tables
 ```bash
-docker-compose exec postgresql psql -U admin -d pypistats -c "\dt"
+docker compose exec postgresql psql -U admin -d pypistats -c "\dt"
 ```
 
 ### Check Recent Downloads
 ```bash
-docker-compose exec postgresql psql -U admin -d pypistats -c "SELECT * FROM overall ORDER BY date DESC LIMIT 10;"
+docker compose exec postgresql psql -U admin -d pypistats -c "SELECT * FROM overall ORDER BY date DESC LIMIT 10;"
 ```
 
 ## Troubleshooting
@@ -136,7 +136,7 @@ docker-compose exec postgresql psql -U admin -d pypistats -c "SELECT * FROM over
 ### Common Issues
 
 1. **"GOOGLE_SERVICE_ACCOUNT_JSON environment variable is required"**
-   - Ensure the environment variable is set in docker-compose.yml or .env file
+   - Ensure the environment variable is set in compose.yaml or .env file
    - The JSON must be a valid, complete service account key
 
 2. **BigQuery Permission Denied**
@@ -144,7 +144,7 @@ docker-compose exec postgresql psql -U admin -d pypistats -c "SELECT * FROM over
    - Check the project_id in the service account JSON matches your project
 
 3. **Connection to PostgreSQL Failed**
-   - Ensure PostgreSQL container is running: `docker-compose ps`
+   - Ensure PostgreSQL container is running: `docker compose ps`
    - Check DATABASE_URL is correctly set
 
 4. **No Data Retrieved**
@@ -156,7 +156,7 @@ docker-compose exec postgresql psql -U admin -d pypistats -c "SELECT * FROM over
 The ETL is configured to run daily at 1 AM UTC via Celery Beat. To verify it's scheduled:
 
 ```bash
-docker-compose exec beat celery -A pypistats.extensions.celery inspect scheduled
+docker compose exec beat celery -A pypistats.extensions.celery inspect scheduled
 ```
 
 ## Sample .env File for Local Testing
@@ -172,7 +172,7 @@ BASIC_AUTH_PASSWORD=secret
 PYPISTATS_SECRET=dev-secret-key
 ```
 
-Then update docker-compose.yml to use the .env file:
+Then update compose.yaml to use the .env file:
 ```yaml
 x-envs: &envs
   env_file: .env

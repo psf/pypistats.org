@@ -63,7 +63,7 @@ for package in packages + ["__all__"]:
             )
             records.append(record)
 
-        for idx, category in enumerate(["2", "3"]):
+        for idx, category in enumerate(["null", "2", "3"]):
             record = PythonMajorDownloadCount(
                 date=date,
                 package=package,
@@ -72,7 +72,9 @@ for package in packages + ["__all__"]:
             )
             records.append(record)
 
-        for idx, category in enumerate(["2.7", "3.4", "3.5", "3.6", "3.7", "3.8"]):
+        for idx, category in enumerate(
+            ["null", "2.7", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
+        ):
             record = PythonMinorDownloadCount(
                 date=date,
                 package=package,
@@ -81,7 +83,7 @@ for package in packages + ["__all__"]:
             )
             records.append(record)
 
-        for idx, category in enumerate(["windows", "linux", "darwin"]):
+        for idx, category in enumerate(["null", "windows", "linux", "darwin"]):
             record = SystemDownloadCount(
                 date=date,
                 package=package,

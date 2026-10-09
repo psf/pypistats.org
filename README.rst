@@ -25,14 +25,13 @@ Development
 Prerequisites:
 
 - Docker
-- Docker Compose, available as the ``docker-compose`` command used by the
-  Makefile
+- Docker Compose, available as the ``docker compose`` command used by the Makefile
 - Make
 
 1. Copy ``.env.example`` to ``.env`` and configure your environment variables:
-   
+
    .. code-block:: bash
-   
+
       cp .env.example .env
       # Edit .env with your configuration
 
@@ -43,3 +42,16 @@ Prerequisites:
    .. code-block:: bash
 
       make pypistats
+
+Functional tests
+----------------
+
+After setting up ``.env`` as above, run:
+
+.. code-block:: bash
+
+   make test
+
+This runs the tests in Docker Compose using isolated PostgreSQL databases and
+reports code coverage in the terminal and at ``htmlcov/index.html``.
+PostgreSQL remains running afterward.

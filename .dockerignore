@@ -3,6 +3,9 @@
 .gitignoreold
 .dockerignore
 .tool-versions
+compose.yaml
+compose.yml
+docker-compose.yaml
 docker-compose.yml
 envs/
 .venv/
@@ -19,6 +22,13 @@ README.rst
 # python bytecode
 *.py[cod]
 **/__pycache__/
+
+# test and coverage output
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
 
 # celery
 celerybeat-schedule

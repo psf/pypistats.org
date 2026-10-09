@@ -1,8 +1,13 @@
 # Development dependencies for pypistats.org
-# To update: pip-compile requirements-dev.in
+# To update all dependencies and hashes: make update-deps
 # To install: pip install -r requirements-dev.txt
 
 # Development tools only - production deps are in requirements.txt
-black>=19.10b0
-isort>=5.3
+-c requirements.txt
+black
+isort
 pip-tools
+pytest
+pytest-cov
+pytest-flask
+pytest-postgresql

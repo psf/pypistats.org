@@ -1,5 +1,5 @@
 # Set variables for reuse
-ARG PYTHON_VERSION=3.13-slim-bookworm
+ARG PYTHON_VERSION=3.14-slim-trixie
 
 # Build stage for dependencies
 FROM python:${PYTHON_VERSION} AS build
@@ -17,7 +17,7 @@ RUN set -eux; \
     echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache;
 
 # Install system dependencies with cache mount
-# libpq-dev is required for psycopg2-binary compilation
+# libpq-dev supports building PostgreSQL client extensions if needed
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     set -x \
