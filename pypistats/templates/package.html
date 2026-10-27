@@ -80,7 +80,10 @@ Downloads last week:
 Downloads last month:
 {{ "{:,.0f}".format(recent['month']) }}
 <br>
-<input type="checkbox" id="smoothing" {{ 'checked' if use_smoothing else ''}} onclick="return setSmoothing();"> 7-day smoothing
+<label>
+    <input type="checkbox" id="smoothing" {{ 'checked' if use_smoothing else ''}} onclick="return setSmoothing();">
+    7-day smoothing
+</label>
 </p>
     <script>
 
