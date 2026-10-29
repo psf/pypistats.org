@@ -11,12 +11,9 @@
         "l": 100,
         "pad": 0
       },
-      "paper_bgcolor": "#fff",
-      "plot_bgcolor": "rgba(175, 175, 175, 0.2)",
       "showlegend": true,
       "legend": {
         "orientation": "v",
-        "bgcolor": "#e7e7e7",
         "xanchor": "left",
         "yanchor": "middle",
         "x": 0,
@@ -27,7 +24,6 @@
         "tickformat": "%m-%d",
         "dtick": 604800000,
         "tick0": "2017-08-07",
-        "gridcolor": "#FFF",
         "gridwidth": 2,
         "anchor": "y",
         "domain": [
@@ -37,11 +33,9 @@
         "title": "Date",
         "titlefont": {
           "family": "Geneva, Verdana, Geneva, sans-serif",
-          "size": 16,
-          "color": "#7f7f7f"
+          "size": 16
         },
         "showline": true,
-        "linecolor": "rgba(148, 148, 148, 1)",
         "linewidth": 2,
         "tickangle": -45,
         "rangeselector": {
@@ -76,7 +70,6 @@
       "yaxis": {
         "hoverformat": ",.0",
         "tickformat": ",.0",
-        "gridcolor": "#FFF",
         "gridwidth": 2,
         "autotick": true,
         "rangemode": "tozero",
@@ -84,7 +77,6 @@
         "title": "Downloads",
         "ticksuffix": "",
         "tickmode": "auto",
-        "linecolor": "rgba(148, 148, 148, 1)",
         "linewidth": 2,
         "rangeselector": {
           "buttons": [
@@ -143,12 +135,9 @@
         "l": 100,
         "pad": 0
       },
-      "paper_bgcolor": "#fff",
-      "plot_bgcolor": "rgba(175, 175, 175, 0.2)",
       "showlegend": true,
       "legend": {
         "orientation": "v",
-        "bgcolor": "#e7e7e7",
         "xanchor": "left",
         "yanchor": "middle",
         "x": 0,
@@ -159,7 +148,6 @@
         "tickformat": "%m-%d",
         "dtick": 604800000,
         "tick0": "2017-08-07",
-        "gridcolor": "#FFF",
         "gridwidth": 2,
         "anchor": "y",
         "domain": [
@@ -169,11 +157,9 @@
         "title": "Date",
         "titlefont": {
           "family": "Geneva, Verdana, Geneva, sans-serif",
-          "size": 16,
-          "color": "#7f7f7f"
+          "size": 16
         },
         "showline": true,
-        "linecolor": "rgba(148, 148, 148, 1)",
         "linewidth": 2,
         "tickangle": -45
       },
@@ -183,14 +169,12 @@
           100
         ],
         "dtick": 20,
-        "gridcolor": "#FFF",
         "gridwidth": 2,
         "autotick": false,
         "showline": true,
         "title": "Download Proportion",
         "ticksuffix": "%",
         "tickmode": "auto",
-        "linecolor": "rgba(148, 148, 148, 1)",
         "linewidth": 2
       }
     },
