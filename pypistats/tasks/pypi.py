@@ -523,19 +523,18 @@ def update_recent_stats(date=None):
 
     success = {}
     for period, clause in where.items():
-        select_query = f"""SELECT package, '{period}' as category, sum(downloads) AS downloads
+        insert_query = f"""INSERT INTO {recent_table} (package, category, downloads)
+                SELECT package, '{period}' as category, sum(downloads) AS downloads
                 FROM {downloads_table}
                 WHERE category = 'without_mirrors' and {clause}
                 GROUP BY package"""
-        cursor.execute(select_query)
-        values = cursor.fetchall()
 
         delete_query = f"""DELETE FROM {recent_table}
                 WHERE category = '{period}'"""
         try:
             print(delete_query)
             cursor.execute(delete_query)
-            copy_rows(cursor, recent_table, values, columns=("package", "category", "downloads"))
+            cursor.execute(insert_query)
             connection.commit()
             success[period] = True
         except psycopg.IntegrityError as e:
