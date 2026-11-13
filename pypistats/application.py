@@ -14,6 +14,8 @@ from pypistats.extensions import migrate
 def create_app(config_object=DevConfig):
     """Create the application."""
     app = Flask(__name__.split(".")[0])
+    # Accept URLs with or without a trailing slash for all application routes.
+    app.url_map.strict_slashes = False
     app.config.from_object(config_object)
     register_extensions(app)
     register_blueprints(app)

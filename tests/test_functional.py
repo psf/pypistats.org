@@ -40,8 +40,9 @@ def assert_package_page(client, date, day, week, month):
         ("?period=month", {"last_month": 30}),
     ],
 )
-def test_recent_api(client, query, data):
-    assert get_json(client, f"/api/packages/sample_package/recent{query}") == {
+@pytest.mark.parametrize("slash", ["", "/"])
+def test_recent_api(client, query, data, slash):
+    assert get_json(client, f"/api/packages/sample_package/recent{slash}{query}") == {
         "package": "sample-package",
         "type": "recent_downloads",
         "data": data,
@@ -58,8 +59,9 @@ def test_recent_api(client, query, data):
         ("system", "os=linux", "Linux", 1),
     ],
 )
-def test_history_apis(client, date, endpoint, query, category, multiplier):
-    assert get_json(client, f"/api/packages/sample.package/{endpoint}?{query}") == {
+@pytest.mark.parametrize("slash", ["", "/"])
+def test_history_apis(client, date, endpoint, query, category, multiplier, slash):
+    assert get_json(client, f"/api/packages/sample.package/{endpoint}{slash}?{query}") == {
         "package": "sample-package",
         "type": f"{endpoint}_downloads",
         "data": [
@@ -101,10 +103,34 @@ def test_api_errors(client, path):
         ("/status", "OK"),
     ],
 )
-def test_public_pages(client, path, content):
-    response = client.get(path)
+@pytest.mark.parametrize("slash", ["", "/"])
+def test_public_pages(client, path, content, slash):
+    response = client.get(path.rstrip("/") + slash or "/")
     assert response.status_code == 200
     assert content in response.get_data(as_text=True)
+
+
+def test_package_page_trailing_slash(client):
+    query = "?lookback=30&smooth=true"
+    expected = client.get(f"/packages/sample-package{query}")
+    response = client.get(f"/packages/sample-package/{query}")
+    assert expected.status_code == response.status_code == 200
+    assert response.data == expected.data
+
+
+@pytest.mark.parametrize("slash", ["", "/"])
+def test_search_submission(client, slash):
+    response = client.post(f"/search/sample{slash}", data={"name": "sample-package"})
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/search/sample-package"
+    response = client.get(response.headers["Location"], follow_redirects=True)
+    assert response.status_code == 200
+    assert response.request.path == "/packages/sample-package"
+
+
+@pytest.mark.parametrize("path", ["/missing", "/missing/", "/packages/sample-package/missing/"])
+def test_unknown_routes(client, path):
+    assert client.get(path).status_code == 404
 
 
 def test_search_and_top_packages(client):
@@ -151,14 +177,16 @@ def test_all_packages_page(client, pypi_request):
     pypi_request.assert_not_called()
 
 
-def test_admin_auth_and_submission(client, date, monkeypatch):
+@pytest.mark.parametrize("slash", ["", "/"])
+def test_admin_auth_and_submission(client, date, monkeypatch, slash):
     enqueue = Mock()
     monkeypatch.setattr("pypistats.views.admin.etl.apply_async", enqueue)
-    assert client.post("/admin", data={"date": str(date)}).status_code == 401
-    assert client.get("/admin", auth=("test", "wrong-password")).status_code == 401
-    assert client.post("/admin", data={"date": "invalid"}, auth=("test", "test-password")).status_code == 200
+    path = f"/admin{slash}"
+    assert client.post(path, data={"date": str(date)}).status_code == 401
+    assert client.get(path, auth=("test", "wrong-password")).status_code == 401
+    assert client.post(path, data={"date": "invalid"}, auth=("test", "test-password")).status_code == 200
     enqueue.assert_not_called()
-    response = client.post("/admin", data={"date": str(date)}, auth=("test", "test-password"))
+    response = client.post(path, data={"date": str(date)}, auth=("test", "test-password"))
     assert response.status_code == 200
     assert f"{date} submitted." in response.text
     enqueue.assert_called_once_with(args=(str(date),))
