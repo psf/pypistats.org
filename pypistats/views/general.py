@@ -31,7 +31,7 @@ from pypistats.models.download import SystemDownloadCount
 blueprint = Blueprint("general", __name__, template_folder="templates")
 
 
-MODELS = [OverallDownloadCount, PythonMajorDownloadCount, PythonMinorDownloadCount, SystemDownloadCount]
+MODELS = [OverallDownloadCount, PythonMinorDownloadCount, PythonMajorDownloadCount, SystemDownloadCount]
 
 
 def _marker_mentions_extra(marker):
