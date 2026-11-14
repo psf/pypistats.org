@@ -57,8 +57,18 @@ def date():
 @pytest.fixture(autouse=True)
 def sample_data(app, date):
     from pypistats.extensions import db
+    from pypistats.models.download import OverallDownloadCount
+    from pypistats.models.download import PythonMajorDownloadCount
+    from pypistats.models.download import PythonMinorDownloadCount
     from pypistats.models.download import RecentDownloadCount
-    from pypistats.views.general import MODELS
+    from pypistats.models.download import SystemDownloadCount
+
+    categories = {
+        OverallDownloadCount: "without_mirrors",
+        PythonMajorDownloadCount: "3",
+        PythonMinorDownloadCount: "3.13",
+        SystemDownloadCount: "Linux",
+    }
 
     for package, counts in {
         "sample-package": [(date - datetime.timedelta(days=1), 20), (date, 10)],
@@ -66,9 +76,11 @@ def sample_data(app, date):
         "__all__": [(date - datetime.timedelta(days=1), 20), (date, 50)],
     }.items():
         for day, downloads in counts:
-            for model, category in zip(MODELS, ["without_mirrors", "3", "3.13", "Linux"]):
+            for model, category in categories.items():
                 db.session.add(model(package=package, date=day, category=category, downloads=downloads))
-            db.session.add(MODELS[0](package=package, date=day, category="with_mirrors", downloads=downloads * 2))
+            db.session.add(
+                OverallDownloadCount(package=package, date=day, category="with_mirrors", downloads=downloads * 2)
+            )
         for period in ["day", "week", "month"]:
             downloads = counts[-1][1] if period == "day" else sum(count for _, count in counts)
             db.session.add(RecentDownloadCount(package=package, category=period, downloads=downloads))
