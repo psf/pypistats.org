@@ -83,8 +83,7 @@ Downloads last month:
 <input type="checkbox" id="smoothing" {{ 'checked' if use_smoothing else ''}} onclick="return setSmoothing();"> 7-day smoothing
 </p>
     <script>
-
-        (function () {
+        (function () { "use strict";
             var WIDTH_IN_PERCENT_OF_PARENT = 100
             // var HEIGHT = '300px'
             var divelems = []
@@ -92,7 +91,91 @@ Downloads last month:
             var data =
             {{ plots|tojson }}
 
-            for (plt in data) {
+            var colors = {
+                light: {
+                    paper_bgcolor: '#fff',
+                    plot_bgcolor: 'rgba(175, 175, 175, 0.2)',
+                    font: { color: undefined },
+                    titlefont: { color: '#7f7f7f' },
+                    legend: {
+                        bgcolor: '#e7e7e7',
+                        font: { color: undefined }
+                    },
+                    xaxis: {
+                        gridcolor: '#FFF',
+                        linecolor: undefined,
+                        tickcolor: undefined,
+                        tickfont: { color: undefined },
+                        rangeselector: {
+                            bgcolor: undefined,
+                            activecolor: undefined,
+                            bordercolor: undefined
+                        }
+                    },
+                    yaxis: {
+                        gridcolor: '#FFF',
+                        linecolor: 'rgba(148, 148, 148, 1)',
+                        tickcolor: undefined,
+                        tickfont: { color: undefined }
+                    },
+                    linecolor: 'rgba(148, 148, 148, 1)',
+                    colorway: undefined
+                },
+                dark: {
+                    paper_bgcolor: '#121212',
+                    plot_bgcolor: 'rgba(30,30,30,0.9)',
+                    font: { color: '#e0e0e0' },
+                    titlefont: { color: '#ffffff' },
+                    legend: {
+                        bgcolor: '#1a1a1a',
+                        font: { color: '#bbbbbb' }
+                    },
+                    xaxis: {
+                        gridcolor: '#333333',
+                        linecolor: 'rgba(148,148,148,0.6)',
+                        tickcolor: '#cccccc',
+                        tickfont: { color: '#cccccc' },
+                        rangeselector: {
+                            bgcolor: '#333333',
+                            activecolor: 'rgb(82,82,82)',
+                            bordercolor: '#cccccc'
+                        }
+                    },
+                    yaxis: {
+                        gridcolor: '#333333',
+                        linecolor: 'rgba(148,148,148,0.6)',
+                        tickcolor: '#cccccc',
+                        tickfont: { color: "#cccccc" }
+                    },
+                    linecolor: 'rgba(200,200,200,1)',
+                    colorway: [
+                        '#4da6ff',
+                        '#ff9933',
+                        '#33cc33',
+                        '#ff4d4d',
+                        '#b366ff',
+                        '#a0522d',
+                        '#ff66cc',
+                        '#bfbfbf',
+                        '#d4d700',
+                        '#33cccc'
+                    ]
+                }
+            };
+
+            var colorTheme = 'light';
+            if (window.matchMedia) {
+                var colorTheme_mmq = window.matchMedia('(prefers-color-scheme: dark)');
+                if (colorTheme_mmq.matches) { colorTheme = 'dark'; }
+                colorTheme_mmq.addEventListener('change', function (e) {
+                    colorTheme = e.matches ? 'dark' : 'light';
+                    for (var d in divelems) {
+                        Plotly.relayout(divelems[d], $.extend(true, {}, data[d].layout, colors[colorTheme]))
+                    }
+                });
+            }
+
+            for (var plt in data) {
                 var gd3 = Plotly.d3.select('section').append('div').style({
                     width: WIDTH_IN_PERCENT_OF_PARENT + '%',
                     'margin-left': (100 - WIDTH_IN_PERCENT_OF_PARENT) / 2 + '%',
@@ -100,10 +183,12 @@ Downloads last month:
                 })
                 var gd = gd3.node()
                 divelems.push(gd)
-                Plotly.newPlot(divelems[divelems.length - 1], data[plt].data, data[plt].layout, data[plt].config);
+
+                Plotly.newPlot(divelems[divelems.length - 1], data[plt].data,
+                    $.extend(true, {}, data[plt].layout, colors[colorTheme]), data[plt].config)
             }
             window.onresize = function () {
-                for (chart in divelems) {
+                for (var chart in divelems) {
                     Plotly.Plots.resize(divelems[chart]);
                 }
             };
