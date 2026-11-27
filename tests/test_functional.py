@@ -81,6 +81,9 @@ def test_history_categories(client):
     [
         "/api/packages/missing/recent",
         "/api/packages/missing/overall",
+        "/api/packages/missing/python_major",
+        "/api/packages/missing/python_minor",
+        "/api/packages/missing/system",
         "/api/packages/sample-package/recent?period=year",
     ],
 )
