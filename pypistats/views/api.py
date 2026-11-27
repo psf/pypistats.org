@@ -115,12 +115,11 @@ def generic_downloads(model, package, arg, name):
     else:
         downloads = model.query.filter_by(package=package).order_by(model.category, model.date).all()
 
-    response = {"package": package, "type": f"{name}_downloads"}
-    if downloads is not None:
-        response["data"] = [{"date": str(r.date), "category": r.category, "downloads": r.downloads} for r in downloads]
-    else:
+    if not downloads and OverallDownloadCount.query.filter_by(package=package).first() is None:
         abort(404)
 
+    response = {"package": package, "type": f"{name}_downloads"}
+    response["data"] = [{"date": str(r.date), "category": r.category, "downloads": r.downloads} for r in downloads]
     return jsonify(response)
 
 
